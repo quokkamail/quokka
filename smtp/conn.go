@@ -26,6 +26,7 @@ type replyCode int
 const (
 	replyCode220 replyCode = 220
 	replyCode221 replyCode = 221
+	replyCode250 replyCode = 250
 
 	replyCode500 replyCode = 500
 	replyCode501 replyCode = 501
@@ -68,7 +69,7 @@ func (c *conn) serve() {
 
 			// log.Printf("data: %s\n", dl)
 
-			fmt.Fprint(c.rwc, "250 OK\r\n")
+			c.replyWithCode(replyCode250)
 
 			c.data = dl
 			c.isReceivingData = false
@@ -93,12 +94,12 @@ func (c *conn) serve() {
 
 		switch cmdAndArg[0] {
 		case cmdEHLO:
-			fmt.Fprint(c.rwc, "250-Hello, nice to meet you\r\n")
+			fmt.Fprint(c.rwc, "250 Hello, nice to meet you\r\n")
 
 			// dummy extensions
-			fmt.Fprint(c.rwc, "250-8BITMIME\r\n")
-			fmt.Fprint(c.rwc, "250-SIZE\r\n")
-			fmt.Fprint(c.rwc, "250 PIPELINING\r\n")
+			// fmt.Fprint(c.rwc, "250-8BITMIME\r\n")
+			// fmt.Fprint(c.rwc, "250-SIZE\r\n")
+			// fmt.Fprint(c.rwc, "250 PIPELINING\r\n")
 			// fmt.Fprint(c.rwc, "250 AUTH\r\n")
 
 			c.greeted = true
@@ -109,6 +110,11 @@ func (c *conn) serve() {
 			c.greeted = true
 
 		case cmdMAIL:
+			if len(cmdAndArg) == 1 {
+				c.replyWithCode(replyCode501)
+				continue
+			}
+
 			c.handleMailCommand(cmdAndArg[1])
 
 		case cmdRCPT:
@@ -117,7 +123,7 @@ func (c *conn) serve() {
 				continue
 			}
 
-			fmt.Fprint(c.rwc, "250 OK\r\n")
+			c.replyWithCode(replyCode250)
 
 			c.rcptTo = "dummy"
 
@@ -132,20 +138,18 @@ func (c *conn) serve() {
 			c.isReceivingData = true
 
 		case cmdQUIT:
-			fmt.Fprint(c.rwc, "221 See you later\r\n")
-
+			c.replyWithCode(replyCode221)
 			c.rwc.Close()
 
 		case cmdRSET:
 			c.reset()
-
-			fmt.Fprint(c.rwc, "250 OK\r\n")
+			c.replyWithCode(replyCode250)
 
 		case cmdNOOP:
-			fmt.Fprint(c.rwc, "250 OK\r\n")
+			c.replyWithCode(replyCode250)
 
 		default:
-			c.replyWithCode(replyCode502)
+			c.replyWithCode(replyCode500)
 		}
 	}
 }
@@ -164,6 +168,8 @@ func (c *conn) replyWithCode(code replyCode) {
 		text = "<domain> Service ready"
 	case replyCode221:
 		text = "<domain> Service closing transmission channel"
+	case replyCode250:
+		text = "Requested mail action okay, completed"
 
 	case replyCode500:
 		text = "Syntax error, command unrecognized (This may include errors such as command line too long)"

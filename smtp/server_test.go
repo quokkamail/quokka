@@ -53,3 +53,46 @@ func newClientServerTest(t testing.TB) *clientServerTest {
 
 	return cst
 }
+
+type TestServer struct {
+	t testing.TB
+	s *smtp.Server
+	l net.Listener
+	// c *textproto.Conn
+}
+
+func (ts *TestServer) Client() *textproto.Conn {
+	conn, err := net.Dial("tcp", ts.l.Addr().String())
+	if err != nil {
+		ts.t.Fatalf("failed to dial: %v", err)
+	}
+
+	textConn := textproto.NewConn(conn)
+
+	ts.t.Cleanup(func() {
+		textConn.Close()
+	})
+
+	return textConn
+}
+
+func NewTestServer(t testing.TB) *TestServer {
+	srv := &smtp.Server{}
+
+	ls, err := newLocalListener()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go srv.Serve(ls)
+
+	t.Cleanup(func() {
+		srv.Close()
+	})
+
+	return &TestServer{
+		t: t,
+		s: srv,
+		l: ls,
+	}
+}
