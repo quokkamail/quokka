@@ -1,13 +1,13 @@
 package version
 
-import "strconv"
+import "fmt"
 
 type Version struct {
-	Major uint64
-	Minor uint64
-	Patch uint64
+	Major uint
+	Minor uint
+	Patch uint
 }
 
-func (v *Version) ToString() string {
-	return strconv.FormatUint(v.Major, 10) + "." + strconv.FormatUint(v.Minor, 10) + "." + strconv.FormatUint(v.Patch, 10)
+func (v *Version) String() string {
+	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
 }
