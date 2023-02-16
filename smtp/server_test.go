@@ -20,39 +20,39 @@ func newLocalListener() (net.Listener, error) {
 	return l, nil
 }
 
-type clientServerTest struct {
-	// t testing.TB
-	s *smtp.Server
-	c *textproto.Conn
-}
+// type clientServerTest struct {
+// 	// t testing.TB
+// 	s *smtp.Server
+// 	c *textproto.Conn
+// }
 
-func newClientServerTest(t testing.TB) *clientServerTest {
-	cst := &clientServerTest{
-		// t: t,
-		s: &smtp.Server{},
-	}
+// func newClientServerTest(t testing.TB) *clientServerTest {
+// 	cst := &clientServerTest{
+// 		// t: t,
+// 		s: &smtp.Server{},
+// 	}
 
-	ls, err := newLocalListener()
-	if err != nil {
-		t.Fatal(err)
-	}
+// 	ls, err := newLocalListener()
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
 
-	go cst.s.Serve(ls)
+// 	go cst.s.Serve(ls)
 
-	conn, err := net.Dial("tcp", ls.Addr().String())
-	if err != nil {
-		t.Fatalf("failed to dial: %v", err)
-	}
+// 	conn, err := net.Dial("tcp", ls.Addr().String())
+// 	if err != nil {
+// 		t.Fatalf("failed to dial: %v", err)
+// 	}
 
-	cst.c = textproto.NewConn(conn)
+// 	cst.c = textproto.NewConn(conn)
 
-	t.Cleanup(func() {
-		cst.c.Close()
-		cst.s.Close()
-	})
+// 	t.Cleanup(func() {
+// 		cst.c.Close()
+// 		cst.s.Close()
+// 	})
 
-	return cst
-}
+// 	return cst
+// }
 
 type TestServer struct {
 	t testing.TB

@@ -34,6 +34,8 @@ func (s *Server) ListenAndServe() error {
 		return err
 	}
 
+	defer ln.Close()
+
 	return s.Serve(ln)
 }
 
