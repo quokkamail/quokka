@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    name: Build
+  build-and-test:
+    name: Build and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
