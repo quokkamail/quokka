@@ -26,7 +26,7 @@ func (s *SubmissionsServer) ListenAndServeTLS() error {
 
 	addr := s.Addr
 	if addr == "" {
-		addr = ":submissions"
+		addr = ":465"
 	}
 
 	ln, err := net.Listen("tcp", addr)

@@ -7,21 +7,22 @@ import (
 func TestCommandUnrecognized(t *testing.T) {
 	t.Parallel()
 
-	cst := newClientServerTest(t)
+	ts := NewTestServer(t)
+	tc := ts.Client()
 
-	if _, _, err := cst.c.ReadResponse(220); err != nil {
+	if _, _, err := tc.ReadResponse(220); err != nil {
 		t.Fatal(err)
 	}
 
-	id, err := cst.c.Cmd("DUMMYCOMMAND")
+	id, err := tc.Cmd("DUMMYCOMMAND")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cst.c.StartResponse(id)
-	defer cst.c.EndResponse(id)
+	tc.StartResponse(id)
+	defer tc.EndResponse(id)
 
-	if _, _, err := cst.c.ReadResponse(500); err != nil {
+	if _, _, err := tc.ReadResponse(500); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -29,21 +30,22 @@ func TestCommandUnrecognized(t *testing.T) {
 func TestHELOCommand(t *testing.T) {
 	t.Parallel()
 
-	cst := newClientServerTest(t)
+	ts := NewTestServer(t)
+	tc := ts.Client()
 
-	if _, _, err := cst.c.ReadResponse(220); err != nil {
+	if _, _, err := tc.ReadResponse(220); err != nil {
 		t.Fatal(err)
 	}
 
-	id, err := cst.c.Cmd("HELO")
+	id, err := tc.Cmd("HELO")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cst.c.StartResponse(id)
-	defer cst.c.EndResponse(id)
+	tc.StartResponse(id)
+	defer tc.EndResponse(id)
 
-	if _, _, err := cst.c.ReadResponse(250); err != nil {
+	if _, _, err := tc.ReadResponse(250); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -51,21 +53,22 @@ func TestHELOCommand(t *testing.T) {
 func TestQUITCommand(t *testing.T) {
 	t.Parallel()
 
-	cst := newClientServerTest(t)
+	ts := NewTestServer(t)
+	tc := ts.Client()
 
-	if _, _, err := cst.c.ReadResponse(220); err != nil {
+	if _, _, err := tc.ReadResponse(220); err != nil {
 		t.Fatal(err)
 	}
 
-	id, err := cst.c.Cmd("QUIT")
+	id, err := tc.Cmd("QUIT")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cst.c.StartResponse(id)
-	defer cst.c.EndResponse(id)
+	tc.StartResponse(id)
+	defer tc.EndResponse(id)
 
-	if _, _, err := cst.c.ReadResponse(221); err != nil {
+	if _, _, err := tc.ReadResponse(221); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -73,21 +76,22 @@ func TestQUITCommand(t *testing.T) {
 func TestRSETCommand(t *testing.T) {
 	t.Parallel()
 
-	cst := newClientServerTest(t)
+	ts := NewTestServer(t)
+	tc := ts.Client()
 
-	if _, _, err := cst.c.ReadResponse(220); err != nil {
+	if _, _, err := tc.ReadResponse(220); err != nil {
 		t.Fatal(err)
 	}
 
-	id, err := cst.c.Cmd("RSET")
+	id, err := tc.Cmd("RSET")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cst.c.StartResponse(id)
-	defer cst.c.EndResponse(id)
+	tc.StartResponse(id)
+	defer tc.EndResponse(id)
 
-	if _, _, err := cst.c.ReadResponse(250); err != nil {
+	if _, _, err := tc.ReadResponse(250); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -95,21 +99,22 @@ func TestRSETCommand(t *testing.T) {
 func TestNOOPCommand(t *testing.T) {
 	t.Parallel()
 
-	cst := newClientServerTest(t)
+	ts := NewTestServer(t)
+	tc := ts.Client()
 
-	if _, _, err := cst.c.ReadResponse(220); err != nil {
+	if _, _, err := tc.ReadResponse(220); err != nil {
 		t.Fatal(err)
 	}
 
-	id, err := cst.c.Cmd("NOOP")
+	id, err := tc.Cmd("NOOP")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cst.c.StartResponse(id)
-	defer cst.c.EndResponse(id)
+	tc.StartResponse(id)
+	defer tc.EndResponse(id)
 
-	if _, _, err := cst.c.ReadResponse(250); err != nil {
+	if _, _, err := tc.ReadResponse(250); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -156,6 +161,52 @@ func TestMAILCommandWithInvalidArguments(t *testing.T) {
 	defer tc.EndResponse(id)
 
 	if _, _, err := tc.ReadResponse(501); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestMAILCommandWithNoReversePath(t *testing.T) {
+	t.Parallel()
+
+	ts := NewTestServer(t)
+	tc := ts.Client()
+
+	if _, _, err := tc.ReadResponse(220); err != nil {
+		t.Fatal(err)
+	}
+
+	id, err := tc.Cmd("MAIL FROM:")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tc.StartResponse(id)
+	defer tc.EndResponse(id)
+
+	if _, _, err := tc.ReadResponse(501); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestMAILCommand(t *testing.T) {
+	t.Parallel()
+
+	ts := NewTestServer(t)
+	tc := ts.Client()
+
+	if _, _, err := tc.ReadResponse(220); err != nil {
+		t.Fatal(err)
+	}
+
+	id, err := tc.Cmd("MAIL FROM: <mail@domain.ext>")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tc.StartResponse(id)
+	defer tc.EndResponse(id)
+
+	if _, _, err := tc.ReadResponse(250); err != nil {
 		t.Fatal(err)
 	}
 }
