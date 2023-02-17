@@ -2,8 +2,13 @@ package smtp
 
 import (
 	"crypto/tls"
+	"errors"
 	"net"
 	"sync/atomic"
+)
+
+var (
+	ErrServerClosed = errors.New("smtp: Server closed")
 )
 
 type Server struct {

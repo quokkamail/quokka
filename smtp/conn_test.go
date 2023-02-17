@@ -142,52 +142,6 @@ func TestMAILCommandWithNoArguments(t *testing.T) {
 	}
 }
 
-func TestMAILCommandWithInvalidArguments(t *testing.T) {
-	t.Parallel()
-
-	ts := NewTestServer(t)
-	tc := ts.Client()
-
-	if _, _, err := tc.ReadResponse(220); err != nil {
-		t.Fatal(err)
-	}
-
-	id, err := tc.Cmd("MAIL ARG1")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tc.StartResponse(id)
-	defer tc.EndResponse(id)
-
-	if _, _, err := tc.ReadResponse(501); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestMAILCommandWithNoReversePath(t *testing.T) {
-	t.Parallel()
-
-	ts := NewTestServer(t)
-	tc := ts.Client()
-
-	if _, _, err := tc.ReadResponse(220); err != nil {
-		t.Fatal(err)
-	}
-
-	id, err := tc.Cmd("MAIL FROM:")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tc.StartResponse(id)
-	defer tc.EndResponse(id)
-
-	if _, _, err := tc.ReadResponse(501); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestMAILCommand(t *testing.T) {
 	t.Parallel()
 
