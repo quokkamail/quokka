@@ -5,192 +5,189 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/textproto"
 	"strings"
 )
 
-const (
-	cmdDATA string = "DATA"
-	cmdEHLO string = "EHLO"
-	cmdHELO string = "HELO"
-	cmdMAIL string = "MAIL"
-	cmdQUIT string = "QUIT"
-	cmdRCPT string = "RCPT"
-	cmdRSET string = "RSET"
-	cmdNOOP string = "NOOP"
-)
-
-type replyCode int
-
-const (
-	replyCode220 replyCode = 220
-	replyCode221 replyCode = 221
-	replyCode250 replyCode = 250
-
-	replyCode500 replyCode = 500
-	replyCode501 replyCode = 501
-	replyCode502 replyCode = 502
-	replyCode503 replyCode = 503
-	replyCode504 replyCode = 504
-)
-
 type conn struct {
-	server          *Server
-	rwc             net.Conn
-	isReceivingData bool
-	rcptTo          string
-	mailFrom        string
-	greeted         bool
-	data            []string
+	server   *Server
+	rwc      net.Conn
+	rcptTo   []string
+	mailFrom string
+	data     []string
 }
 
 func (c *conn) serve() {
-	// log.Println("New connection")
-
-	// greet the client
-	c.replyWithCode(replyCode220)
+	c.replyWithCode(220)
 
 	r := textproto.NewReader(bufio.NewReader(c.rwc))
 
 	for {
-		if c.isReceivingData {
-			// log.Println("reading data...")
-
-			dl, err := r.ReadDotLines()
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return
-				}
-
-				// log.Printf("error: %s\n", err)
-				return
-			}
-
-			// log.Printf("data: %s\n", dl)
-
-			c.replyWithCode(replyCode250)
-
-			c.data = dl
-			c.isReceivingData = false
-
-			continue
-		}
-
-		l, err := r.ReadLine()
+		cmdAndArgs, err := r.ReadLine()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				return
 			}
 
-			// log.Printf("error: %s\n", err)
+			log.Printf("error: %s\n", err)
 			return
 		}
 
-		l = strings.ToUpper(l)
-		// log.Printf("command: %s\n", l)
+		command, _, _ := strings.Cut(cmdAndArgs, " ")
 
-		cmdAndArg := strings.SplitN(l, " ", 2)
+		switch strings.ToUpper(command) {
+		case "EHLO":
+			c.handleEHLOCommand()
 
-		switch cmdAndArg[0] {
-		case cmdEHLO:
-			fmt.Fprint(c.rwc, "250 Hello, nice to meet you\r\n")
+		case "HELO":
+			c.handleHELOCommand()
 
-			// dummy extensions
-			// fmt.Fprint(c.rwc, "250-8BITMIME\r\n")
-			// fmt.Fprint(c.rwc, "250-SIZE\r\n")
-			// fmt.Fprint(c.rwc, "250 PIPELINING\r\n")
-			// fmt.Fprint(c.rwc, "250 AUTH\r\n")
+		case "MAIL":
+			c.handleMailCommand(cmdAndArgs)
 
-			c.greeted = true
+		case "RCPT":
+			// if !hasArg {
+			// 	c.replyWithCode(replyCode501)
+			// 	continue
+			// }
 
-		case cmdHELO:
-			fmt.Fprintf(c.rwc, "250 Hello, nice to meet you\r\n")
+			c.handleRCPTCommand(cmdAndArgs)
 
-			c.greeted = true
+		case "DATA":
+			c.handleDATACommand(r)
 
-		case cmdMAIL:
-			if len(cmdAndArg) == 1 {
-				c.replyWithCode(replyCode501)
-				continue
-			}
+		case "QUIT":
+			c.handleQUITCommand()
 
-			c.handleMailCommand(cmdAndArg[1])
+		case "RSET":
+			c.handleRSETCommand()
 
-		case cmdRCPT:
-			if c.mailFrom == "" {
-				fmt.Fprint(c.rwc, "503 Must have sender before recipient\r\n")
-				continue
-			}
-
-			c.replyWithCode(replyCode250)
-
-			c.rcptTo = "dummy"
-
-		case cmdDATA:
-			if c.rcptTo == "" || c.mailFrom == "" {
-				fmt.Fprint(c.rwc, "503 Must have valid receiver and originator\r\n")
-				continue
-			}
-
-			fmt.Fprint(c.rwc, "354 Start mail input; end with <CRLF>.<CRLF>\r\n")
-
-			c.isReceivingData = true
-
-		case cmdQUIT:
-			c.replyWithCode(replyCode221)
-			c.rwc.Close()
-
-		case cmdRSET:
-			c.reset()
-			c.replyWithCode(replyCode250)
-
-		case cmdNOOP:
-			c.replyWithCode(replyCode250)
+		case "NOOP":
+			c.handleNOOPCommand()
 
 		default:
-			c.replyWithCode(replyCode500)
+			c.replyWithCode(500)
 		}
 	}
 }
 
 func (c *conn) reset() {
-	c.rcptTo = ""
+	c.rcptTo = make([]string, 0)
 	c.mailFrom = ""
 	c.data = make([]string, 0)
 }
 
-func (c *conn) replyWithCode(code replyCode) {
-	var text string
+func (c *conn) replyWithCode(code uint) {
+	var message string
 
 	switch code {
-	case replyCode220:
-		text = "<domain> Service ready"
-	case replyCode221:
-		text = "<domain> Service closing transmission channel"
-	case replyCode250:
-		text = "Requested mail action okay, completed"
+	case 220:
+		message = "<domain> Service ready"
+	case 221:
+		message = "<domain> Service closing transmission channel"
+	case 250:
+		message = "Requested mail action okay, completed"
 
-	case replyCode500:
-		text = "Syntax error, command unrecognized (This may include errors such as command line too long)"
-	case replyCode501:
-		text = "Syntax error in parameters or arguments"
-	case replyCode502:
-		text = "Command not implemented"
-	case replyCode503:
-		text = "Bad sequence of commands"
-	case replyCode504:
-		text = "Command parameter not implemented"
+	case 354:
+		message = "Start mail input; end with <CRLF>.<CRLF>"
+
+	case 500:
+		message = "Syntax error, command unrecognized (This may include errors such as command line too long)"
+	case 501:
+		message = "Syntax error in parameters or arguments"
+	case 502:
+		message = "Command not implemented"
+	case 503:
+		message = "Bad sequence of commands"
+	case 504:
+		message = "Command parameter not implemented"
 	}
 
-	fmt.Fprintf(c.rwc, "%d %s\r\n", code, text)
+	c.replyWithCodeAndMessage(code, message)
 }
 
-func (c *conn) handleMailCommand(arg string) {
-	if len(arg) < 6 || arg[0:5] != "FROM:" {
-		c.replyWithCode(replyCode501)
+func (c *conn) replyWithCodeAndMessage(code uint, message string) {
+	fmt.Fprintf(c.rwc, "%d %s\r\n", code, message)
+}
+
+func (c *conn) handleMailCommand(cmdAndArgs string) {
+	if c.mailFrom != "" {
+		c.replyWithCode(503)
 		return
 	}
 
-	_ = strings.Split(strings.Trim(arg[5:], " "), " ")
+	mailCmd, err := ParseMailCommand(cmdAndArgs)
+	if err != nil {
+		c.replyWithCode(501)
+		return
+	}
+
+	c.mailFrom = mailCmd.ReversePath
+	c.replyWithCode(250)
+}
+
+func (c *conn) handleRCPTCommand(cmdAndArgs string) {
+	if len(c.mailFrom) == 0 {
+		c.replyWithCode(503)
+		return
+	}
+
+	if len(cmdAndArgs) < 3 || cmdAndArgs[:3] != "TO:" {
+		c.replyWithCode(501)
+		return
+	}
+
+	rcptTo := strings.Split(strings.Trim(cmdAndArgs[3:], " "), " ")
+	if rcptTo[0] == "" {
+		c.replyWithCode(501)
+	}
+
+	c.rcptTo = append(c.rcptTo, rcptTo...)
+	c.replyWithCode(250)
+}
+
+func (c *conn) handleEHLOCommand() {
+	c.replyWithCodeAndMessage(250, "Hello, nice to meet you")
+}
+
+func (c *conn) handleHELOCommand() {
+	c.replyWithCodeAndMessage(250, "Hello, nice to meet you")
+}
+
+func (c *conn) handleQUITCommand() {
+	c.replyWithCode(221)
+	// c.rwc.Close()
+}
+
+func (c *conn) handleRSETCommand() {
+	c.reset()
+	c.replyWithCode(250)
+}
+
+func (c *conn) handleNOOPCommand() {
+	c.replyWithCode(250)
+}
+
+func (c *conn) handleDATACommand(r *textproto.Reader) {
+	if len(c.mailFrom) == 0 || len(c.rcptTo) == 0 {
+		c.replyWithCode(503)
+		return
+	}
+
+	c.replyWithCode(354)
+
+	dl, err := r.ReadDotLines()
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return
+		}
+
+		log.Printf("error: %s\n", err)
+		return
+	}
+
+	c.data = dl
+	c.replyWithCode(250)
 }

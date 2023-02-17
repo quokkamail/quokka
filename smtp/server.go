@@ -2,8 +2,13 @@ package smtp
 
 import (
 	"crypto/tls"
+	"errors"
 	"net"
 	"sync/atomic"
+)
+
+var (
+	ErrServerClosed = errors.New("smtp: Server closed")
 )
 
 type Server struct {
@@ -33,6 +38,8 @@ func (s *Server) ListenAndServe() error {
 	if err != nil {
 		return err
 	}
+
+	defer ln.Close()
 
 	return s.Serve(ln)
 }
