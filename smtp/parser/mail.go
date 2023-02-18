@@ -1,4 +1,4 @@
-package smtp
+package parser
 
 import (
 	"errors"
@@ -6,14 +6,14 @@ import (
 )
 
 var (
-	ErrMailCommandInvalid = errors.New("smtp: Mail command is invalid")
+	ErrMailCommandInvalid = errors.New("parser: Mail command is invalid")
 )
 
 type MailCommand struct {
 	ReversePath string
 }
 
-func ParseMailCommand(cmdAndArgs string) (*MailCommand, error) {
+func NewMailCommand(cmdAndArgs string) (*MailCommand, error) {
 	if len(cmdAndArgs) < 10 || strings.ToUpper(cmdAndArgs[:10]) != "MAIL FROM:" {
 		return nil, ErrMailCommandInvalid
 	}
