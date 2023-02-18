@@ -9,6 +9,8 @@ import (
 	"net"
 	"net/textproto"
 	"strings"
+
+	"github.com/quokkamail/quokka/smtp/parser"
 )
 
 type conn struct {
@@ -48,11 +50,6 @@ func (c *conn) serve() {
 			c.handleMailCommand(cmdAndArgs)
 
 		case "RCPT":
-			// if !hasArg {
-			// 	c.replyWithCode(replyCode501)
-			// 	continue
-			// }
-
 			c.handleRCPTCommand(cmdAndArgs)
 
 		case "DATA":
@@ -118,7 +115,7 @@ func (c *conn) handleMailCommand(cmdAndArgs string) {
 		return
 	}
 
-	mailCmd, err := ParseMailCommand(cmdAndArgs)
+	mailCmd, err := parser.NewMailCommand(cmdAndArgs)
 	if err != nil {
 		c.replyWithCode(501)
 		return
@@ -129,22 +126,18 @@ func (c *conn) handleMailCommand(cmdAndArgs string) {
 }
 
 func (c *conn) handleRCPTCommand(cmdAndArgs string) {
-	if len(c.mailFrom) == 0 {
+	if c.mailFrom == "" {
 		c.replyWithCode(503)
 		return
 	}
 
-	if len(cmdAndArgs) < 3 || cmdAndArgs[:3] != "TO:" {
+	recipientCmd, err := parser.NewRecipientCommand(cmdAndArgs)
+	if err != nil {
 		c.replyWithCode(501)
 		return
 	}
 
-	rcptTo := strings.Split(strings.Trim(cmdAndArgs[3:], " "), " ")
-	if rcptTo[0] == "" {
-		c.replyWithCode(501)
-	}
-
-	c.rcptTo = append(c.rcptTo, rcptTo...)
+	c.rcptTo = append(c.rcptTo, recipientCmd.ForwardPath)
 	c.replyWithCode(250)
 }
 
@@ -171,7 +164,7 @@ func (c *conn) handleNOOPCommand() {
 }
 
 func (c *conn) handleDATACommand(r *textproto.Reader) {
-	if len(c.mailFrom) == 0 || len(c.rcptTo) == 0 {
+	if c.mailFrom == "" || len(c.rcptTo) == 0 {
 		c.replyWithCode(503)
 		return
 	}
