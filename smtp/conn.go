@@ -214,6 +214,11 @@ func (c *conn) handleDATACommand() {
 }
 
 func (c *conn) handleStartTLSCommand() {
+	if c.tls {
+		c.replyWithCode(502)
+		return
+	}
+
 	c.replyWithCodeAndMessage(220, "Ready to start TLS")
 
 	tlsConn := tls.Server(c.conn, c.server.TLSConfig)
