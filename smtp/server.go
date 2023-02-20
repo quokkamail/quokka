@@ -59,6 +59,6 @@ func (s *Server) Serve(l net.Listener) error {
 func (s *Server) newConn(rwc net.Conn) *conn {
 	return &conn{
 		server: s,
-		rwc:    rwc,
+		conn:   rwc,
 	}
 }
