@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -26,7 +25,7 @@ type session struct {
 }
 
 func (s *session) serve() {
-	s.replyWithCode(220)
+	s.reply(replyReady("<domain>"))
 
 	s.txtReader = textproto.NewReader(bufio.NewReader(s.conn))
 
@@ -45,37 +44,27 @@ func (s *session) serve() {
 
 		switch strings.ToUpper(command) {
 		case "EHLO":
-			s.handleEHLOCommand()
-
+			s.handleEhloCommand()
 		case "HELO":
 			s.handleHELOCommand()
-
 		case "MAIL":
 			s.handleMailCommand(cmdAndArgs)
-
 		case "RCPT":
 			s.handleRCPTCommand(cmdAndArgs)
-
 		case "DATA":
 			s.handleDATACommand()
-
 		case "QUIT":
 			s.handleQUITCommand()
-
 		case "RSET":
 			s.handleRSETCommand()
-
 		case "NOOP":
 			s.handleNOOPCommand()
-
 		case "STARTTLS":
 			s.handleStartTLSCommand()
-
 		case "AUTH":
 			s.handleAuthCommand()
-
 		default:
-			s.replyWithCode(500)
+			s.reply(replyCommandUnrecognized())
 		}
 	}
 }
@@ -86,142 +75,87 @@ func (s *session) reset() {
 	s.data = make([]string, 0)
 }
 
-func (s *session) replyWithCode(code uint) {
-	var message string
-
-	switch code {
-	case 220:
-		message = "<domain> Service ready"
-	case 221:
-		message = "<domain> Service closing transmission channel"
-	case 250:
-		message = "Requested mail action okay, completed"
-
-	case 354:
-		message = "Start mail input; end with <CRLF>.<CRLF>"
-
-	case 454:
-		message = "TLS not available due to temporary reason"
-
-	case 500:
-		message = "Syntax error, command unrecognized (This may include errors such as command line too long)"
-	case 501:
-		message = "Syntax error in parameters or arguments"
-	case 502:
-		message = "Command not implemented"
-	case 503:
-		message = "Bad sequence of commands"
-	case 504:
-		message = "Command parameter not implemented"
-	case 530:
-		message = "Must issue a STARTTLS / AUTH command first"
-	}
-
-	s.replyWithCodeAndMessage(code, message)
-}
-
-func (s *session) replyWithCodeAndMessage(code uint, message string) {
-	fmt.Fprintf(s.conn, "%d %s\r\n", code, message)
-}
-
-func (s *session) replyWithCodeAndMessages(code uint, messages []string) {
-	for i, m := range messages {
-		sep := "-"
-		if i == len(messages)-1 {
-			sep = " "
-		}
-
-		fmt.Fprintf(s.conn, "%d%s%s\r\n", code, sep, m)
-	}
-}
-
 func (s *session) handleMailCommand(cmdAndArgs string) {
-	if s.config.AuthenticationMandatory && !s.authenticated {
-		s.replyWithCode(530)
+	if s.isNotAuthenticatedWhenMandatory() {
+		s.reply(replyAuthenticationRequired())
 		return
 	}
 
 	if s.mailFrom != "" {
-		s.replyWithCode(503)
+		s.reply(replyBadSequence())
 		return
 	}
 
 	mailCmd, err := parser.NewMailCommand(cmdAndArgs)
 	if err != nil {
-		s.replyWithCode(501)
+		s.reply(replySyntaxError())
 		return
 	}
 
 	s.mailFrom = mailCmd.ReversePath
-	s.replyWithCode(250)
+	s.reply(replyOk())
 }
 
 func (s *session) handleRCPTCommand(cmdAndArgs string) {
-	if s.config.AuthenticationMandatory && !s.authenticated {
-		s.replyWithCode(530)
+	if s.isNotAuthenticatedWhenMandatory() {
+		s.reply(replyAuthenticationRequired())
 		return
 	}
 
 	if s.mailFrom == "" {
-		s.replyWithCode(503)
+		s.reply(replyBadSequence())
 		return
 	}
 
 	recipientCmd, err := parser.NewRecipientCommand(cmdAndArgs)
 	if err != nil {
-		s.replyWithCode(501)
+		s.reply(replySyntaxError())
 		return
 	}
 
 	s.rcptTo = append(s.rcptTo, recipientCmd.ForwardPath)
-	s.replyWithCode(250)
+	s.reply(replyOk())
 }
 
-func (s *session) handleEHLOCommand() {
-	msgs := []string{
-		"Hello, nice to meet you",
-	}
-
-	msgs = append(msgs, "AUTH PLAIN")
-	msgs = append(msgs, "PIPELINING")
-
+func (s *session) handleEhloCommand() {
+	extensions := []string{"AUTH PLAIN", "PIPELINING"}
 	if !s.tls {
-		msgs = append(msgs, "STARTTLS")
+		extensions = append(extensions, "STARTTLS")
 	}
 
-	s.replyWithCodeAndMessages(250, msgs)
+	s.reply(replyEhloOk(extensions))
 }
 
 func (s *session) handleHELOCommand() {
-	s.replyWithCodeAndMessage(250, "Hello, nice to meet you")
+	s.reply(replyHeloOk())
 }
 
 func (s *session) handleQUITCommand() {
-	s.replyWithCode(221)
+	s.reply(replyClosingConnection("<domain>"))
 	s.conn.Close()
 }
 
 func (s *session) handleRSETCommand() {
 	s.reset()
-	s.replyWithCode(250)
+	s.reply(replyOk())
 }
 
 func (s *session) handleNOOPCommand() {
-	s.replyWithCode(250)
+	s.reply(replyOk())
 }
 
 func (s *session) handleDATACommand() {
-	if s.config.AuthenticationMandatory && !s.authenticated {
-		s.replyWithCode(530)
+	if s.isNotAuthenticatedWhenMandatory() {
+		s.reply(replyAuthenticationRequired())
 		return
 	}
 
 	if s.mailFrom == "" || len(s.rcptTo) == 0 {
-		s.replyWithCode(503)
+		s.reply(replyBadSequence())
 		return
 	}
 
-	s.replyWithCode(354)
+	s.reply(replyStartMailInput())
 
 	dl, err := s.txtReader.ReadDotLines()
 	if err != nil {
@@ -234,21 +168,21 @@ func (s *session) handleDATACommand() {
 	}
 
 	s.data = dl
-	s.replyWithCode(250)
+	s.reply(replyOk())
 }
 
 func (s *session) handleStartTLSCommand() {
 	if s.tls {
-		s.replyWithCode(503)
+		s.reply(replyBadSequence())
 		return
 	}
 
-	s.replyWithCodeAndMessage(220, "Ready to start TLS")
+	s.reply(replyReadyToStartTLS())
 
 	tlsConn := tls.Server(s.conn, s.config.TLSConfig)
 	if err := tlsConn.Handshake(); err != nil {
 		log.Printf("error: %s\n", err)
-		s.replyWithCode(454)
+		s.reply(replyTLSNotAvailable())
 		return
 	}
 
@@ -260,7 +194,11 @@ func (s *session) handleStartTLSCommand() {
 
 func (s *session) handleAuthCommand() {
 	if s.config.AuthenticationEncrypted && !s.tls {
-		s.replyWithCode(530)
+		s.reply(replyMustIssueSTARTTLSFirst())
 		return
 	}
+}
+
+func (s *session) isNotAuthenticatedWhenMandatory() bool {
+	return s.config.AuthenticationMandatory && !s.authenticated
 }
