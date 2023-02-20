@@ -15,13 +15,14 @@ import (
 )
 
 type conn struct {
-	server    *Server
-	conn      net.Conn
-	txtReader *textproto.Reader
-	rcptTo    []string
-	mailFrom  string
-	data      []string
-	tls       bool
+	config        Config
+	conn          net.Conn
+	txtReader     *textproto.Reader
+	rcptTo        []string
+	mailFrom      string
+	data          []string
+	tls           bool
+	authenticated bool
 }
 
 func (c *conn) serve() {
@@ -70,6 +71,9 @@ func (c *conn) serve() {
 		case "STARTTLS":
 			c.handleStartTLSCommand()
 
+		case "AUTH":
+			c.handleAuthCommand()
+
 		default:
 			c.replyWithCode(500)
 		}
@@ -109,6 +113,8 @@ func (c *conn) replyWithCode(code uint) {
 		message = "Bad sequence of commands"
 	case 504:
 		message = "Command parameter not implemented"
+	case 530:
+		message = "Must issue a STARTTLS / AUTH command first"
 	}
 
 	c.replyWithCodeAndMessage(code, message)
@@ -130,6 +136,11 @@ func (c *conn) replyWithCodeAndMessages(code uint, messages []string) {
 }
 
 func (c *conn) handleMailCommand(cmdAndArgs string) {
+	if c.config.AuthenticationMandatory && !c.authenticated {
+		c.replyWithCode(530)
+		return
+	}
+
 	if c.mailFrom != "" {
 		c.replyWithCode(503)
 		return
@@ -146,6 +157,11 @@ func (c *conn) handleMailCommand(cmdAndArgs string) {
 }
 
 func (c *conn) handleRCPTCommand(cmdAndArgs string) {
+	if c.config.AuthenticationMandatory && !c.authenticated {
+		c.replyWithCode(530)
+		return
+	}
+
 	if c.mailFrom == "" {
 		c.replyWithCode(503)
 		return
@@ -166,6 +182,7 @@ func (c *conn) handleEHLOCommand() {
 		"Hello, nice to meet you",
 	}
 
+	msgs = append(msgs, "AUTH PLAIN")
 	msgs = append(msgs, "PIPELINING")
 
 	if !c.tls {
@@ -181,7 +198,7 @@ func (c *conn) handleHELOCommand() {
 
 func (c *conn) handleQUITCommand() {
 	c.replyWithCode(221)
-	// c.rwc.Close()
+	c.conn.Close()
 }
 
 func (c *conn) handleRSETCommand() {
@@ -194,6 +211,11 @@ func (c *conn) handleNOOPCommand() {
 }
 
 func (c *conn) handleDATACommand() {
+	if c.config.AuthenticationMandatory && !c.authenticated {
+		c.replyWithCode(530)
+		return
+	}
+
 	if c.mailFrom == "" || len(c.rcptTo) == 0 {
 		c.replyWithCode(503)
 		return
@@ -223,7 +245,7 @@ func (c *conn) handleStartTLSCommand() {
 
 	c.replyWithCodeAndMessage(220, "Ready to start TLS")
 
-	tlsConn := tls.Server(c.conn, c.server.TLSConfig)
+	tlsConn := tls.Server(c.conn, c.config.TLSConfig)
 	if err := tlsConn.Handshake(); err != nil {
 		log.Printf("error: %s\n", err)
 		c.replyWithCode(454)
@@ -234,4 +256,11 @@ func (c *conn) handleStartTLSCommand() {
 	c.txtReader = textproto.NewReader(bufio.NewReader(c.conn))
 	c.tls = true
 	c.reset()
+}
+
+func (c *conn) handleAuthCommand() {
+	if c.config.AuthenticationEncrypted && !c.tls {
+		c.replyWithCode(530)
+		return
+	}
 }

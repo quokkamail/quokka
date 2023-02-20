@@ -17,9 +17,14 @@ func main() {
 		log.Fatalf("tls: %v", err)
 	}
 
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}
+
 	smtpSrv := &smtp.Server{
-		TLSConfig: &tls.Config{
-			Certificates: []tls.Certificate{cert},
+		Config: smtp.Config{
+			TLSConfig:               tlsConfig,
+			AuthenticationEncrypted: true,
 		},
 	}
 
@@ -30,7 +35,13 @@ func main() {
 		}
 	}()
 
-	submissionSrv := &smtp.SubmissionServer{}
+	submissionSrv := &smtp.SubmissionServer{
+		Config: smtp.Config{
+			TLSConfig:               tlsConfig,
+			AuthenticationEncrypted: true,
+			AuthenticationMandatory: true,
+		},
+	}
 
 	// Start the "submission" server on standard port 587
 	go func() {
@@ -39,7 +50,13 @@ func main() {
 		}
 	}()
 
-	submissionsSrv := &smtp.SubmissionsServer{}
+	submissionsSrv := &smtp.SubmissionsServer{
+		Config: smtp.Config{
+			TLSConfig:               tlsConfig,
+			AuthenticationEncrypted: true,
+			AuthenticationMandatory: true,
+		},
+	}
 
 	// Start the "submissions" server on standard port 465
 	go func() {

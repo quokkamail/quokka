@@ -1,14 +1,12 @@
 package smtp
 
 import (
-	"crypto/tls"
 	"net"
 	"sync/atomic"
 )
 
 type SubmissionServer struct {
-	Addr      string
-	TLSConfig *tls.Config
+	Config Config
 
 	inShutdown atomic.Bool
 }
@@ -24,7 +22,7 @@ func (s *SubmissionServer) ListenAndServe() error {
 		return ErrServerClosed
 	}
 
-	addr := s.Addr
+	addr := s.Config.Addr
 	if addr == "" {
 		addr = ":submission"
 	}
@@ -36,5 +34,24 @@ func (s *SubmissionServer) ListenAndServe() error {
 
 	defer ln.Close()
 
-	return nil
+	return s.Serve(ln)
+}
+
+func (s *SubmissionServer) Serve(l net.Listener) error {
+	for {
+		rw, err := l.Accept()
+		if err != nil {
+			return err
+		}
+
+		c := s.newConn(rw)
+		go c.serve()
+	}
+}
+
+func (s *SubmissionServer) newConn(rwc net.Conn) *conn {
+	return &conn{
+		config: s.Config,
+		conn:   rwc,
+	}
 }
