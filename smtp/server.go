@@ -11,9 +11,16 @@ var (
 	ErrServerClosed = errors.New("smtp: Server closed")
 )
 
-type Server struct {
+type Config struct {
 	Addr      string
 	TLSConfig *tls.Config
+
+	AuthenticationEncrypted bool
+	AuthenticationMandatory bool
+}
+
+type Server struct {
+	Config
 
 	inShutdown atomic.Bool
 }
@@ -29,7 +36,7 @@ func (s *Server) ListenAndServe() error {
 		return ErrServerClosed
 	}
 
-	addr := s.Addr
+	addr := s.Config.Addr
 	if addr == "" {
 		addr = ":smtp"
 	}
@@ -58,7 +65,7 @@ func (s *Server) Serve(l net.Listener) error {
 
 func (s *Server) newConn(rwc net.Conn) *conn {
 	return &conn{
-		server: s,
+		config: s.Config,
 		conn:   rwc,
 	}
 }
