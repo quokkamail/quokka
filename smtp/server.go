@@ -58,14 +58,7 @@ func (s *Server) Serve(l net.Listener) error {
 			return err
 		}
 
-		c := s.newConn(rw)
-		go c.serve()
-	}
-}
-
-func (s *Server) newConn(rwc net.Conn) *conn {
-	return &conn{
-		config: s.Config,
-		conn:   rwc,
+		session := &session{config: s.Config, conn: rw}
+		go session.serve()
 	}
 }

@@ -14,7 +14,6 @@ type SubmissionsServer struct {
 
 func (s *SubmissionsServer) Close() error {
 	s.inShutdown.Store(true)
-
 	return nil
 }
 
@@ -45,14 +44,7 @@ func (s *SubmissionsServer) Serve(l net.Listener) error {
 			return err
 		}
 
-		c := s.newConn(rw)
-		go c.serve()
-	}
-}
-
-func (s *SubmissionsServer) newConn(rwc net.Conn) *conn {
-	return &conn{
-		conn: rwc,
-		tls:  true,
+		session := &session{config: s.Config, conn: rw, tls: true}
+		go session.serve()
 	}
 }
