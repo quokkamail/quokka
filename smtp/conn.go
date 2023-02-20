@@ -166,6 +166,8 @@ func (c *conn) handleEHLOCommand() {
 		"Hello, nice to meet you",
 	}
 
+	msgs = append(msgs, "PIPELINING")
+
 	if !c.tls {
 		msgs = append(msgs, "STARTTLS")
 	}
@@ -215,7 +217,7 @@ func (c *conn) handleDATACommand() {
 
 func (c *conn) handleStartTLSCommand() {
 	if c.tls {
-		c.replyWithCode(502)
+		c.replyWithCode(503)
 		return
 	}
 
