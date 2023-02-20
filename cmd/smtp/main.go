@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"os"
 	"os/signal"
@@ -9,7 +10,18 @@ import (
 )
 
 func main() {
-	smtpSrv := &smtp.Server{}
+	// private key: openssl ecparam -name prime256v1 -genkey -noout -out key.pem
+	// cert: openssl req -new -x509 -key key.pem -out cert.pem -days 365
+	cert, err := tls.LoadX509KeyPair("cert.pem", "key.pem")
+	if err != nil {
+		log.Fatalf("tls: %v", err)
+	}
+
+	smtpSrv := &smtp.Server{
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		},
+	}
 
 	// Start the "smtp" server on standard port 25
 	go func() {

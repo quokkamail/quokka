@@ -2,6 +2,7 @@ package smtp
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -14,20 +15,22 @@ import (
 )
 
 type conn struct {
-	server   *Server
-	rwc      net.Conn
-	rcptTo   []string
-	mailFrom string
-	data     []string
+	server    *Server
+	conn      net.Conn
+	txtReader *textproto.Reader
+	rcptTo    []string
+	mailFrom  string
+	data      []string
+	tls       bool
 }
 
 func (c *conn) serve() {
 	c.replyWithCode(220)
 
-	r := textproto.NewReader(bufio.NewReader(c.rwc))
+	c.txtReader = textproto.NewReader(bufio.NewReader(c.conn))
 
 	for {
-		cmdAndArgs, err := r.ReadLine()
+		cmdAndArgs, err := c.txtReader.ReadLine()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				return
@@ -53,7 +56,7 @@ func (c *conn) serve() {
 			c.handleRCPTCommand(cmdAndArgs)
 
 		case "DATA":
-			c.handleDATACommand(r)
+			c.handleDATACommand()
 
 		case "QUIT":
 			c.handleQUITCommand()
@@ -63,6 +66,9 @@ func (c *conn) serve() {
 
 		case "NOOP":
 			c.handleNOOPCommand()
+
+		case "STARTTLS":
+			c.handleStartTLSCommand()
 
 		default:
 			c.replyWithCode(500)
@@ -90,6 +96,9 @@ func (c *conn) replyWithCode(code uint) {
 	case 354:
 		message = "Start mail input; end with <CRLF>.<CRLF>"
 
+	case 454:
+		message = "TLS not available due to temporary reason"
+
 	case 500:
 		message = "Syntax error, command unrecognized (This may include errors such as command line too long)"
 	case 501:
@@ -106,7 +115,18 @@ func (c *conn) replyWithCode(code uint) {
 }
 
 func (c *conn) replyWithCodeAndMessage(code uint, message string) {
-	fmt.Fprintf(c.rwc, "%d %s\r\n", code, message)
+	fmt.Fprintf(c.conn, "%d %s\r\n", code, message)
+}
+
+func (c *conn) replyWithCodeAndMessages(code uint, messages []string) {
+	for i, m := range messages {
+		sep := "-"
+		if i == len(messages)-1 {
+			sep = " "
+		}
+
+		fmt.Fprintf(c.conn, "%d%s%s\r\n", code, sep, m)
+	}
 }
 
 func (c *conn) handleMailCommand(cmdAndArgs string) {
@@ -142,7 +162,15 @@ func (c *conn) handleRCPTCommand(cmdAndArgs string) {
 }
 
 func (c *conn) handleEHLOCommand() {
-	c.replyWithCodeAndMessage(250, "Hello, nice to meet you")
+	msgs := []string{
+		"Hello, nice to meet you",
+	}
+
+	if !c.tls {
+		msgs = append(msgs, "STARTTLS")
+	}
+
+	c.replyWithCodeAndMessages(250, msgs)
 }
 
 func (c *conn) handleHELOCommand() {
@@ -163,7 +191,7 @@ func (c *conn) handleNOOPCommand() {
 	c.replyWithCode(250)
 }
 
-func (c *conn) handleDATACommand(r *textproto.Reader) {
+func (c *conn) handleDATACommand() {
 	if c.mailFrom == "" || len(c.rcptTo) == 0 {
 		c.replyWithCode(503)
 		return
@@ -171,7 +199,7 @@ func (c *conn) handleDATACommand(r *textproto.Reader) {
 
 	c.replyWithCode(354)
 
-	dl, err := r.ReadDotLines()
+	dl, err := c.txtReader.ReadDotLines()
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return
@@ -183,4 +211,25 @@ func (c *conn) handleDATACommand(r *textproto.Reader) {
 
 	c.data = dl
 	c.replyWithCode(250)
+}
+
+func (c *conn) handleStartTLSCommand() {
+	if c.tls {
+		c.replyWithCode(502)
+		return
+	}
+
+	c.replyWithCodeAndMessage(220, "Ready to start TLS")
+
+	tlsConn := tls.Server(c.conn, c.server.TLSConfig)
+	if err := tlsConn.Handshake(); err != nil {
+		log.Printf("error: %s\n", err)
+		c.replyWithCode(454)
+		return
+	}
+
+	c.conn = tlsConn
+	c.txtReader = textproto.NewReader(bufio.NewReader(c.conn))
+	c.tls = true
+	c.reset()
 }
