@@ -49,8 +49,8 @@ func (s *SubmissionServer) Serve(l net.Listener) error {
 	}
 }
 
-func (s *SubmissionServer) newConn(rwc net.Conn) *conn {
-	return &conn{
+func (s *SubmissionServer) newConn(rwc net.Conn) *session {
+	return &session{
 		config: s.Config,
 		conn:   rwc,
 	}

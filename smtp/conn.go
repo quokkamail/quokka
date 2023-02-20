@@ -14,7 +14,7 @@ import (
 	"github.com/quokkamail/quokka/smtp/parser"
 )
 
-type conn struct {
+type session struct {
 	config        Config
 	conn          net.Conn
 	txtReader     *textproto.Reader
@@ -25,13 +25,13 @@ type conn struct {
 	authenticated bool
 }
 
-func (c *conn) serve() {
-	c.replyWithCode(220)
+func (s *session) serve() {
+	s.replyWithCode(220)
 
-	c.txtReader = textproto.NewReader(bufio.NewReader(c.conn))
+	s.txtReader = textproto.NewReader(bufio.NewReader(s.conn))
 
 	for {
-		cmdAndArgs, err := c.txtReader.ReadLine()
+		cmdAndArgs, err := s.txtReader.ReadLine()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				return
@@ -45,48 +45,48 @@ func (c *conn) serve() {
 
 		switch strings.ToUpper(command) {
 		case "EHLO":
-			c.handleEHLOCommand()
+			s.handleEHLOCommand()
 
 		case "HELO":
-			c.handleHELOCommand()
+			s.handleHELOCommand()
 
 		case "MAIL":
-			c.handleMailCommand(cmdAndArgs)
+			s.handleMailCommand(cmdAndArgs)
 
 		case "RCPT":
-			c.handleRCPTCommand(cmdAndArgs)
+			s.handleRCPTCommand(cmdAndArgs)
 
 		case "DATA":
-			c.handleDATACommand()
+			s.handleDATACommand()
 
 		case "QUIT":
-			c.handleQUITCommand()
+			s.handleQUITCommand()
 
 		case "RSET":
-			c.handleRSETCommand()
+			s.handleRSETCommand()
 
 		case "NOOP":
-			c.handleNOOPCommand()
+			s.handleNOOPCommand()
 
 		case "STARTTLS":
-			c.handleStartTLSCommand()
+			s.handleStartTLSCommand()
 
 		case "AUTH":
-			c.handleAuthCommand()
+			s.handleAuthCommand()
 
 		default:
-			c.replyWithCode(500)
+			s.replyWithCode(500)
 		}
 	}
 }
 
-func (c *conn) reset() {
-	c.rcptTo = make([]string, 0)
-	c.mailFrom = ""
-	c.data = make([]string, 0)
+func (s *session) reset() {
+	s.rcptTo = make([]string, 0)
+	s.mailFrom = ""
+	s.data = make([]string, 0)
 }
 
-func (c *conn) replyWithCode(code uint) {
+func (s *session) replyWithCode(code uint) {
 	var message string
 
 	switch code {
@@ -117,67 +117,67 @@ func (c *conn) replyWithCode(code uint) {
 		message = "Must issue a STARTTLS / AUTH command first"
 	}
 
-	c.replyWithCodeAndMessage(code, message)
+	s.replyWithCodeAndMessage(code, message)
 }
 
-func (c *conn) replyWithCodeAndMessage(code uint, message string) {
-	fmt.Fprintf(c.conn, "%d %s\r\n", code, message)
+func (s *session) replyWithCodeAndMessage(code uint, message string) {
+	fmt.Fprintf(s.conn, "%d %s\r\n", code, message)
 }
 
-func (c *conn) replyWithCodeAndMessages(code uint, messages []string) {
+func (s *session) replyWithCodeAndMessages(code uint, messages []string) {
 	for i, m := range messages {
 		sep := "-"
 		if i == len(messages)-1 {
 			sep = " "
 		}
 
-		fmt.Fprintf(c.conn, "%d%s%s\r\n", code, sep, m)
+		fmt.Fprintf(s.conn, "%d%s%s\r\n", code, sep, m)
 	}
 }
 
-func (c *conn) handleMailCommand(cmdAndArgs string) {
-	if c.config.AuthenticationMandatory && !c.authenticated {
-		c.replyWithCode(530)
+func (s *session) handleMailCommand(cmdAndArgs string) {
+	if s.config.AuthenticationMandatory && !s.authenticated {
+		s.replyWithCode(530)
 		return
 	}
 
-	if c.mailFrom != "" {
-		c.replyWithCode(503)
+	if s.mailFrom != "" {
+		s.replyWithCode(503)
 		return
 	}
 
 	mailCmd, err := parser.NewMailCommand(cmdAndArgs)
 	if err != nil {
-		c.replyWithCode(501)
+		s.replyWithCode(501)
 		return
 	}
 
-	c.mailFrom = mailCmd.ReversePath
-	c.replyWithCode(250)
+	s.mailFrom = mailCmd.ReversePath
+	s.replyWithCode(250)
 }
 
-func (c *conn) handleRCPTCommand(cmdAndArgs string) {
-	if c.config.AuthenticationMandatory && !c.authenticated {
-		c.replyWithCode(530)
+func (s *session) handleRCPTCommand(cmdAndArgs string) {
+	if s.config.AuthenticationMandatory && !s.authenticated {
+		s.replyWithCode(530)
 		return
 	}
 
-	if c.mailFrom == "" {
-		c.replyWithCode(503)
+	if s.mailFrom == "" {
+		s.replyWithCode(503)
 		return
 	}
 
 	recipientCmd, err := parser.NewRecipientCommand(cmdAndArgs)
 	if err != nil {
-		c.replyWithCode(501)
+		s.replyWithCode(501)
 		return
 	}
 
-	c.rcptTo = append(c.rcptTo, recipientCmd.ForwardPath)
-	c.replyWithCode(250)
+	s.rcptTo = append(s.rcptTo, recipientCmd.ForwardPath)
+	s.replyWithCode(250)
 }
 
-func (c *conn) handleEHLOCommand() {
+func (s *session) handleEHLOCommand() {
 	msgs := []string{
 		"Hello, nice to meet you",
 	}
@@ -185,45 +185,45 @@ func (c *conn) handleEHLOCommand() {
 	msgs = append(msgs, "AUTH PLAIN")
 	msgs = append(msgs, "PIPELINING")
 
-	if !c.tls {
+	if !s.tls {
 		msgs = append(msgs, "STARTTLS")
 	}
 
-	c.replyWithCodeAndMessages(250, msgs)
+	s.replyWithCodeAndMessages(250, msgs)
 }
 
-func (c *conn) handleHELOCommand() {
-	c.replyWithCodeAndMessage(250, "Hello, nice to meet you")
+func (s *session) handleHELOCommand() {
+	s.replyWithCodeAndMessage(250, "Hello, nice to meet you")
 }
 
-func (c *conn) handleQUITCommand() {
-	c.replyWithCode(221)
-	c.conn.Close()
+func (s *session) handleQUITCommand() {
+	s.replyWithCode(221)
+	s.conn.Close()
 }
 
-func (c *conn) handleRSETCommand() {
-	c.reset()
-	c.replyWithCode(250)
+func (s *session) handleRSETCommand() {
+	s.reset()
+	s.replyWithCode(250)
 }
 
-func (c *conn) handleNOOPCommand() {
-	c.replyWithCode(250)
+func (s *session) handleNOOPCommand() {
+	s.replyWithCode(250)
 }
 
-func (c *conn) handleDATACommand() {
-	if c.config.AuthenticationMandatory && !c.authenticated {
-		c.replyWithCode(530)
+func (s *session) handleDATACommand() {
+	if s.config.AuthenticationMandatory && !s.authenticated {
+		s.replyWithCode(530)
 		return
 	}
 
-	if c.mailFrom == "" || len(c.rcptTo) == 0 {
-		c.replyWithCode(503)
+	if s.mailFrom == "" || len(s.rcptTo) == 0 {
+		s.replyWithCode(503)
 		return
 	}
 
-	c.replyWithCode(354)
+	s.replyWithCode(354)
 
-	dl, err := c.txtReader.ReadDotLines()
+	dl, err := s.txtReader.ReadDotLines()
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return
@@ -233,34 +233,34 @@ func (c *conn) handleDATACommand() {
 		return
 	}
 
-	c.data = dl
-	c.replyWithCode(250)
+	s.data = dl
+	s.replyWithCode(250)
 }
 
-func (c *conn) handleStartTLSCommand() {
-	if c.tls {
-		c.replyWithCode(503)
+func (s *session) handleStartTLSCommand() {
+	if s.tls {
+		s.replyWithCode(503)
 		return
 	}
 
-	c.replyWithCodeAndMessage(220, "Ready to start TLS")
+	s.replyWithCodeAndMessage(220, "Ready to start TLS")
 
-	tlsConn := tls.Server(c.conn, c.config.TLSConfig)
+	tlsConn := tls.Server(s.conn, s.config.TLSConfig)
 	if err := tlsConn.Handshake(); err != nil {
 		log.Printf("error: %s\n", err)
-		c.replyWithCode(454)
+		s.replyWithCode(454)
 		return
 	}
 
-	c.conn = tlsConn
-	c.txtReader = textproto.NewReader(bufio.NewReader(c.conn))
-	c.tls = true
-	c.reset()
+	s.conn = tlsConn
+	s.txtReader = textproto.NewReader(bufio.NewReader(s.conn))
+	s.tls = true
+	s.reset()
 }
 
-func (c *conn) handleAuthCommand() {
-	if c.config.AuthenticationEncrypted && !c.tls {
-		c.replyWithCode(530)
+func (s *session) handleAuthCommand() {
+	if s.config.AuthenticationEncrypted && !s.tls {
+		s.replyWithCode(530)
 		return
 	}
 }

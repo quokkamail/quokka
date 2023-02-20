@@ -63,8 +63,8 @@ func (s *Server) Serve(l net.Listener) error {
 	}
 }
 
-func (s *Server) newConn(rwc net.Conn) *conn {
-	return &conn{
+func (s *Server) newConn(rwc net.Conn) *session {
+	return &session{
 		config: s.Config,
 		conn:   rwc,
 	}

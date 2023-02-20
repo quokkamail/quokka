@@ -50,8 +50,8 @@ func (s *SubmissionsServer) Serve(l net.Listener) error {
 	}
 }
 
-func (s *SubmissionsServer) newConn(rwc net.Conn) *conn {
-	return &conn{
+func (s *SubmissionsServer) newConn(rwc net.Conn) *session {
+	return &session{
 		conn: rwc,
 		tls:  true,
 	}
