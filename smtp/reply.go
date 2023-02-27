@@ -49,6 +49,7 @@ func replySyntaxError() reply {
 	return reply{code: 501, lines: []string{"Syntax error in parameters or arguments"}}
 }
 
+// nolint:unused
 func replyCommandNotImplemented() reply {
 	return reply{code: 502, lines: []string{"Command not implemented"}}
 }
@@ -57,6 +58,7 @@ func replyBadSequence() reply {
 	return reply{code: 503, lines: []string{"Bad sequence of commands"}}
 }
 
+// nolint:unused
 func replyCommandParameterNotImplemented() reply {
 	return reply{code: 504, lines: []string{"Command parameter not implemented"}}
 }

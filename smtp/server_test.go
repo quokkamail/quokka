@@ -6,6 +6,8 @@ import (
 	"net/textproto"
 	"testing"
 
+	"github.com/shoenig/test/must"
+
 	"github.com/quokkamail/quokka/smtp"
 )
 
@@ -49,11 +51,12 @@ func NewTestServer(t testing.TB) *TestServer {
 		t.Fatal(err)
 	}
 
-	go srv.Serve(ls)
+	go func() {
+		err := srv.Serve(ls)
+		must.NoError(t, err)
+	}()
 
-	t.Cleanup(func() {
-		srv.Close()
-	})
+	t.Cleanup(func() { srv.Close() })
 
 	return &TestServer{
 		t: t,
