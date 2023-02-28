@@ -7,16 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  coverage:
-    name: Upload coverage reports
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-
   build-and-test:
     name: Build and test
     runs-on: ubuntu-latest
@@ -39,4 +29,7 @@ jobs:
         run: go build -v ./...
 
       - name: Test
-        run: go test -v ./...
+        run: go test -v ./... -race -coverprofile=coverage.out -covermode=atomic
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
