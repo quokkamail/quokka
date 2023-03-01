@@ -69,10 +69,7 @@ func (srv *Server) Serve(l net.Listener) error {
 			return err
 		}
 
-		isTLS := false
-		if _, ok := rw.(*tls.Conn); ok {
-			isTLS = true
-		}
+		_, isTLS := rw.(*tls.Conn)
 
 		s := &session{srv: srv, rwc: rw, tls: isTLS}
 		srv.trackSession(s, true)
