@@ -73,7 +73,7 @@ func replyAuthenticationRequired() reply {
 
 func (s *session) reply(r reply) {
 	for _, m := range r.lines[:len(r.lines)-1] {
-		fmt.Fprintf(s.conn, "%d-%s\r\n", r.code, m)
+		fmt.Fprintf(s.rwc, "%d-%s\r\n", r.code, m)
 	}
-	fmt.Fprintf(s.conn, "%d %s\r\n", r.code, r.lines[len(r.lines)-1])
+	fmt.Fprintf(s.rwc, "%d %s\r\n", r.code, r.lines[len(r.lines)-1])
 }
