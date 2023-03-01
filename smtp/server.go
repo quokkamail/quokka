@@ -32,6 +32,9 @@ type Server struct {
 func (srv *Server) Close() error {
 	srv.inShutdown.Store(true)
 
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+
 	for s := range srv.sessions {
 		s.rwc.Close()
 		delete(srv.sessions, s)
