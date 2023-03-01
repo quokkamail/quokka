@@ -14,8 +14,8 @@ import (
 )
 
 type session struct {
-	config        Config
-	conn          net.Conn
+	srv           *Server
+	rwc           net.Conn
 	txtReader     *textproto.Reader
 	rcptTo        []string
 	mailFrom      string
@@ -25,9 +25,9 @@ type session struct {
 }
 
 func (s *session) serve() {
-	s.reply(replyReady("<domain>"))
+	s.reply(replyReady(s.srv.Domain))
 
-	s.txtReader = textproto.NewReader(bufio.NewReader(s.conn))
+	s.txtReader = textproto.NewReader(bufio.NewReader(s.rwc))
 
 	for {
 		cmdAndArgs, err := s.txtReader.ReadLine()
@@ -131,8 +131,8 @@ func (s *session) handleHELOCommand() {
 }
 
 func (s *session) handleQUITCommand() {
-	s.reply(replyClosingConnection("<domain>"))
-	s.conn.Close()
+	s.reply(replyClosingConnection(s.srv.Domain))
+	s.rwc.Close()
 }
 
 func (s *session) handleRSETCommand() {
@@ -179,26 +179,26 @@ func (s *session) handleStartTLSCommand() {
 
 	s.reply(replyReadyToStartTLS())
 
-	tlsConn := tls.Server(s.conn, s.config.TLSConfig)
+	tlsConn := tls.Server(s.rwc, s.srv.TLSConfig)
 	if err := tlsConn.Handshake(); err != nil {
 		log.Printf("error: %s\n", err)
 		s.reply(replyTLSNotAvailable())
 		return
 	}
 
-	s.conn = tlsConn
-	s.txtReader = textproto.NewReader(bufio.NewReader(s.conn))
+	s.rwc = tlsConn
+	s.txtReader = textproto.NewReader(bufio.NewReader(s.rwc))
 	s.tls = true
 	s.reset()
 }
 
 func (s *session) handleAuthCommand() {
-	if s.config.AuthenticationEncrypted && !s.tls {
+	if s.srv.AuthenticationEncrypted && !s.tls {
 		s.reply(replyMustIssueSTARTTLSFirst())
 		return
 	}
 }
 
 func (s *session) isNotAuthenticatedWhenMandatory() bool {
-	return s.config.AuthenticationMandatory && !s.authenticated
+	return s.srv.AuthenticationMandatory && !s.authenticated
 }

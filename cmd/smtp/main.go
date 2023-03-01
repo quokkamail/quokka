@@ -22,44 +22,44 @@ func main() {
 		Certificates: []tls.Certificate{cert},
 	}
 
+	// Start the "smtp" server on standard port 25
 	smtpSrv := &smtp.Server{
-		Config: smtp.Config{
-			TLSConfig:               tlsConfig,
-			AuthenticationEncrypted: true,
-		},
+		Addr:                    ":smtp",
+		Domain:                  "quokka.local",
+		TLSConfig:               tlsConfig,
+		AuthenticationEncrypted: true,
 	}
 
-	// Start the "smtp" server on standard port 25
 	go func() {
 		if err := smtpSrv.ListenAndServe(); err != nil {
 			log.Fatalf("smtp server: %v", err)
 		}
 	}()
 
-	submissionSrv := &smtp.SubmissionServer{
-		Config: smtp.Config{
-			TLSConfig:               tlsConfig,
-			AuthenticationEncrypted: true,
-			AuthenticationMandatory: true,
-		},
+	// Start the "submission" server on standard port 587
+	submissionSrv := &smtp.Server{
+		Addr:                    ":submission",
+		Domain:                  "quokka.local",
+		TLSConfig:               tlsConfig,
+		AuthenticationEncrypted: true,
+		AuthenticationMandatory: true,
 	}
 
-	// Start the "submission" server on standard port 587
 	go func() {
 		if err := submissionSrv.ListenAndServe(); err != nil {
 			log.Fatalf("submission server: %v", err)
 		}
 	}()
 
-	submissionsSrv := &smtp.SubmissionsServer{
-		Config: smtp.Config{
-			TLSConfig:               tlsConfig,
-			AuthenticationEncrypted: true,
-			AuthenticationMandatory: true,
-		},
+	// Start the "submissions" server on standard port 465
+	submissionsSrv := &smtp.Server{
+		Addr:                    ":465",
+		Domain:                  "quokka.local",
+		TLSConfig:               tlsConfig,
+		AuthenticationEncrypted: true,
+		AuthenticationMandatory: true,
 	}
 
-	// Start the "submissions" server on standard port 465
 	go func() {
 		if err := submissionsSrv.ListenAndServeTLS(); err != nil {
 			log.Fatalf("submissions server: %v", err)
