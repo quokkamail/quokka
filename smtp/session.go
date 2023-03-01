@@ -25,7 +25,7 @@ type session struct {
 }
 
 func (s *session) serve() {
-	s.reply(replyReady("<domain>"))
+	s.reply(replyReady(s.srv.Domain))
 
 	s.txtReader = textproto.NewReader(bufio.NewReader(s.rwc))
 
@@ -131,7 +131,7 @@ func (s *session) handleHELOCommand() {
 }
 
 func (s *session) handleQUITCommand() {
-	s.reply(replyClosingConnection("<domain>"))
+	s.reply(replyClosingConnection(s.srv.Domain))
 	s.rwc.Close()
 }
 

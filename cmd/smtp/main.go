@@ -25,6 +25,7 @@ func main() {
 	// Start the "smtp" server on standard port 25
 	smtpSrv := &smtp.Server{
 		Addr:                    ":smtp",
+		Domain:                  "quokka.local",
 		TLSConfig:               tlsConfig,
 		AuthenticationEncrypted: true,
 	}
@@ -38,6 +39,7 @@ func main() {
 	// Start the "submission" server on standard port 587
 	submissionSrv := &smtp.Server{
 		Addr:                    ":submission",
+		Domain:                  "quokka.local",
 		TLSConfig:               tlsConfig,
 		AuthenticationEncrypted: true,
 		AuthenticationMandatory: true,
@@ -52,6 +54,7 @@ func main() {
 	// Start the "submissions" server on standard port 465
 	submissionsSrv := &smtp.Server{
 		Addr:                    ":465",
+		Domain:                  "quokka.local",
 		TLSConfig:               tlsConfig,
 		AuthenticationEncrypted: true,
 		AuthenticationMandatory: true,

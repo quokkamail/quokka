@@ -20,6 +20,7 @@ type Server struct {
 	Addr      string
 	TLSConfig *tls.Config
 
+	Domain                  string
 	AuthenticationEncrypted bool
 	AuthenticationMandatory bool
 
