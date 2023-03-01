@@ -57,10 +57,6 @@ func (srv *Server) ListenAndServe() error {
 }
 
 func (srv *Server) Serve(l net.Listener) error {
-	if srv.TLSConfig == nil {
-		return ErrMissingServerTLSConfig
-	}
-
 	defer l.Close()
 
 	for {
@@ -73,7 +69,12 @@ func (srv *Server) Serve(l net.Listener) error {
 			return err
 		}
 
-		s := &session{srv: srv, rwc: rw}
+		isTLS := false
+		if _, ok := rw.(*tls.Conn); ok {
+			isTLS = true
+		}
+
+		s := &session{srv: srv, rwc: rw, tls: isTLS}
 		srv.trackSession(s, true)
 		go s.serve()
 	}
