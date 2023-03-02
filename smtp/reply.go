@@ -71,6 +71,10 @@ func replyAuthenticationRequired() reply {
 	return reply{code: 530, lines: []string{"Authentication required"}}
 }
 
+func replyAuthenticationSucceeded() reply {
+	return reply{code: 235, lines: []string{"Authentication Succeeded"}}
+}
+
 func (s *session) reply(r reply) {
 	for _, m := range r.lines[:len(r.lines)-1] {
 		fmt.Fprintf(s.rwc, "%d-%s\r\n", r.code, m)

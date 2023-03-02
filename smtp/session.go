@@ -14,14 +14,15 @@ import (
 )
 
 type session struct {
-	srv           *Server
-	rwc           net.Conn
-	txtReader     *textproto.Reader
-	rcptTo        []string
-	mailFrom      string
-	data          []string
-	tls           bool
 	authenticated bool
+	rwc           net.Conn
+	srv           *Server
+	tls           bool
+	txtReader     *textproto.Reader
+
+	data     []string
+	mailFrom string
+	rcptTo   []string
 }
 
 func (s *session) serve() {
@@ -30,6 +31,8 @@ func (s *session) serve() {
 	s.txtReader = textproto.NewReader(bufio.NewReader(s.rwc))
 
 	for {
+		// s.rwc.SetReadDeadline()
+
 		cmdAndArgs, err := s.txtReader.ReadLine()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
@@ -46,19 +49,19 @@ func (s *session) serve() {
 		case "EHLO":
 			s.handleEhloCommand()
 		case "HELO":
-			s.handleHELOCommand()
+			s.handleHeloCommand()
 		case "MAIL":
 			s.handleMailCommand(cmdAndArgs)
 		case "RCPT":
-			s.handleRCPTCommand(cmdAndArgs)
+			s.handleRcptCommand(cmdAndArgs)
 		case "DATA":
-			s.handleDATACommand()
+			s.handleDataCommand()
 		case "QUIT":
-			s.handleQUITCommand()
+			s.handleQuitCommand()
 		case "RSET":
-			s.handleRSETCommand()
+			s.handleRsetCommand()
 		case "NOOP":
-			s.handleNOOPCommand()
+			s.handleNoopCommand()
 		case "STARTTLS":
 			s.handleStartTLSCommand()
 		case "AUTH":
@@ -96,7 +99,7 @@ func (s *session) handleMailCommand(cmdAndArgs string) {
 	s.reply(replyOk())
 }
 
-func (s *session) handleRCPTCommand(cmdAndArgs string) {
+func (s *session) handleRcptCommand(cmdAndArgs string) {
 	if s.isNotAuthenticatedWhenMandatory() {
 		s.reply(replyAuthenticationRequired())
 		return
@@ -126,25 +129,25 @@ func (s *session) handleEhloCommand() {
 	s.reply(replyEhloOk(extensions))
 }
 
-func (s *session) handleHELOCommand() {
+func (s *session) handleHeloCommand() {
 	s.reply(replyHeloOk())
 }
 
-func (s *session) handleQUITCommand() {
+func (s *session) handleQuitCommand() {
 	s.reply(replyClosingConnection(s.srv.Domain))
 	s.rwc.Close()
 }
 
-func (s *session) handleRSETCommand() {
+func (s *session) handleRsetCommand() {
 	s.reset()
 	s.reply(replyOk())
 }
 
-func (s *session) handleNOOPCommand() {
+func (s *session) handleNoopCommand() {
 	s.reply(replyOk())
 }
 
-func (s *session) handleDATACommand() {
+func (s *session) handleDataCommand() {
 	if s.isNotAuthenticatedWhenMandatory() {
 		s.reply(replyAuthenticationRequired())
 		return
@@ -195,6 +198,11 @@ func (s *session) handleStartTLSCommand() {
 func (s *session) handleAuthCommand() {
 	if s.srv.AuthenticationEncrypted && !s.tls {
 		s.reply(replyMustIssueSTARTTLSFirst())
+		return
+	}
+
+	if s.authenticated {
+		s.reply(replyBadSequence())
 		return
 	}
 }
