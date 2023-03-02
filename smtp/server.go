@@ -1,18 +1,18 @@
 package smtp
 
 import (
-	"context"
 	"crypto/tls"
 	"errors"
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 var (
-	ErrServerClosed           = errors.New("smtp: Server closed")
 	ErrMissingServerAddr      = errors.New("smtp: Missing Server Addr")
 	ErrMissingServerTLSConfig = errors.New("smtp: Missing Server TLSConfig")
+	ErrServerClosed           = errors.New("smtp: Server closed")
 )
 
 // A Server defines parameters for running an SMTP server.
@@ -20,13 +20,17 @@ type Server struct {
 	Addr      string
 	TLSConfig *tls.Config
 
-	Domain                  string
 	AuthenticationEncrypted bool
 	AuthenticationMandatory bool
+	Domain                  string
+
+	Initial220MessageTimeout time.Duration
+	MailCommandTimeout       time.Duration
+	RcptCommandTimeout       time.Duration
 
 	inShutdown atomic.Bool
-	sessions   map[*session]struct{}
 	mu         sync.Mutex
+	sessions   map[*session]struct{}
 }
 
 func (srv *Server) Close() error {
@@ -66,9 +70,9 @@ func (srv *Server) Serve(l net.Listener) error {
 	for {
 		rw, err := l.Accept()
 		if err != nil {
-			if srv.shuttingDown() {
-				return ErrServerClosed
-			}
+			// if srv.shuttingDown() {
+			// 	return ErrServerClosed
+			// }
 
 			return err
 		}
@@ -109,11 +113,11 @@ func (srv *Server) ServeTLS(l net.Listener) error {
 	return srv.Serve(tlsListener)
 }
 
-func (srv *Server) Shutdown(ctx context.Context) error {
-	srv.inShutdown.Store(true)
+// func (srv *Server) Shutdown(ctx context.Context) error {
+// 	srv.inShutdown.Store(true)
 
-	return nil
-}
+// 	return nil
+// }
 
 func (srv *Server) shuttingDown() bool {
 	return srv.inShutdown.Load()
