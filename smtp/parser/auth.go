@@ -27,7 +27,7 @@ func NewAuthCommand(cmdAndArgs string) (*AuthCommand, error) {
 
 	mechanism := strings.ToUpper(args[0])
 	initialResponse := ""
-	if len(args) == 2 {
+	if len(args) >= 2 {
 		initialResponse = args[1]
 	}
 
