@@ -3,6 +3,7 @@ package smtp
 import (
 	"bufio"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"io"
 	"log"
@@ -26,7 +27,7 @@ type session struct {
 }
 
 func (s *session) serve() {
-	s.reply(replyReady(s.srv.Domain))
+	s.replyWithReply(replyReady(s.srv.Domain))
 
 	s.txtReader = textproto.NewReader(bufio.NewReader(s.rwc))
 
@@ -65,9 +66,9 @@ func (s *session) serve() {
 		case "STARTTLS":
 			s.handleStartTLSCommand()
 		case "AUTH":
-			s.handleAuthCommand()
+			s.handleAuthCommand(cmdAndArgs)
 		default:
-			s.reply(replyCommandUnrecognized())
+			s.replyWithReply(replyCommandUnrecognized())
 		}
 	}
 }
@@ -80,44 +81,44 @@ func (s *session) reset() {
 
 func (s *session) handleMailCommand(cmdAndArgs string) {
 	if s.isNotAuthenticatedWhenMandatory() {
-		s.reply(replyAuthenticationRequired())
+		s.replyWithReply(replyAuthenticationRequired())
 		return
 	}
 
 	if s.mailFrom != "" {
-		s.reply(replyBadSequence())
+		s.replyWithReply(replyBadSequence())
 		return
 	}
 
 	mailCmd, err := parser.NewMailCommand(cmdAndArgs)
 	if err != nil {
-		s.reply(replySyntaxError())
+		s.replyWithReply(replySyntaxError())
 		return
 	}
 
 	s.mailFrom = mailCmd.ReversePath
-	s.reply(replyOk())
+	s.replyWithReply(replyOk())
 }
 
 func (s *session) handleRcptCommand(cmdAndArgs string) {
 	if s.isNotAuthenticatedWhenMandatory() {
-		s.reply(replyAuthenticationRequired())
+		s.replyWithReply(replyAuthenticationRequired())
 		return
 	}
 
 	if s.mailFrom == "" {
-		s.reply(replyBadSequence())
+		s.replyWithReply(replyBadSequence())
 		return
 	}
 
 	recipientCmd, err := parser.NewRecipientCommand(cmdAndArgs)
 	if err != nil {
-		s.reply(replySyntaxError())
+		s.replyWithReply(replySyntaxError())
 		return
 	}
 
 	s.rcptTo = append(s.rcptTo, recipientCmd.ForwardPath)
-	s.reply(replyOk())
+	s.replyWithReply(replyOk())
 }
 
 func (s *session) handleEhloCommand() {
@@ -126,39 +127,39 @@ func (s *session) handleEhloCommand() {
 		extensions = append(extensions, "STARTTLS")
 	}
 
-	s.reply(replyEhloOk(extensions))
+	s.replyWithReply(replyEhloOk(extensions))
 }
 
 func (s *session) handleHeloCommand() {
-	s.reply(replyHeloOk())
+	s.replyWithReply(replyHeloOk())
 }
 
 func (s *session) handleQuitCommand() {
-	s.reply(replyClosingConnection(s.srv.Domain))
+	s.replyWithReply(replyClosingConnection(s.srv.Domain))
 	s.rwc.Close()
 }
 
 func (s *session) handleRsetCommand() {
 	s.reset()
-	s.reply(replyOk())
+	s.replyWithReply(replyOk())
 }
 
 func (s *session) handleNoopCommand() {
-	s.reply(replyOk())
+	s.replyWithReply(replyOk())
 }
 
 func (s *session) handleDataCommand() {
 	if s.isNotAuthenticatedWhenMandatory() {
-		s.reply(replyAuthenticationRequired())
+		s.replyWithReply(replyAuthenticationRequired())
 		return
 	}
 
 	if s.mailFrom == "" || len(s.rcptTo) == 0 {
-		s.reply(replyBadSequence())
+		s.replyWithReply(replyBadSequence())
 		return
 	}
 
-	s.reply(replyStartMailInput())
+	s.replyWithReply(replyStartMailInput())
 
 	dl, err := s.txtReader.ReadDotLines()
 	if err != nil {
@@ -171,21 +172,21 @@ func (s *session) handleDataCommand() {
 	}
 
 	s.data = dl
-	s.reply(replyOk())
+	s.replyWithReply(replyOk())
 }
 
 func (s *session) handleStartTLSCommand() {
 	if s.tls {
-		s.reply(replyBadSequence())
+		s.replyWithReply(replyBadSequence())
 		return
 	}
 
-	s.reply(replyReadyToStartTLS())
+	s.replyWithReply(replyReadyToStartTLS())
 
 	tlsConn := tls.Server(s.rwc, s.srv.TLSConfig)
 	if err := tlsConn.Handshake(); err != nil {
 		log.Printf("error: %s\n", err)
-		s.reply(replyTLSNotAvailable())
+		s.replyWithReply(replyTLSNotAvailable())
 		return
 	}
 
@@ -195,15 +196,52 @@ func (s *session) handleStartTLSCommand() {
 	s.reset()
 }
 
-func (s *session) handleAuthCommand() {
+func (s *session) handleAuthCommand(cmdAndArgs string) {
 	if s.srv.AuthenticationEncrypted && !s.tls {
-		s.reply(replyMustIssueSTARTTLSFirst())
+		s.reply(530, "Must issue a STARTTLS command first")
 		return
 	}
 
 	if s.authenticated {
-		s.reply(replyBadSequence())
+		s.reply(503, "Bad sequence of commands")
 		return
+	}
+
+	authCmd, err := parser.NewAuthCommand(cmdAndArgs)
+	if err != nil {
+		s.reply(501, "Syntax error in parameters or arguments")
+		return
+	}
+
+	initialResponseBytes, err := base64.StdEncoding.DecodeString(authCmd.InitialResponse)
+	if err != nil {
+		s.reply(501, "Cannot decode response")
+		log.Printf("error: %s\n", err)
+		return
+	}
+	initialResponse := string(initialResponseBytes)
+
+	switch authCmd.Mechanism {
+	case "PLAIN":
+		if initialResponse == "" {
+			s.reply(334)
+
+			initialResponse, err = s.txtReader.ReadLine()
+			if err != nil {
+				log.Printf("error: %s\n", err)
+				return
+			}
+		}
+
+		initialResponseParts := strings.Split(initialResponse, string([]byte{0}))
+		if len(initialResponseParts) < 3 {
+			return
+		}
+
+		// TODO: real authentication
+		s.reply(235, "Authentication succeeded")
+	default:
+		s.reply(504, "Unrecognized authentication mechanism")
 	}
 }
 
