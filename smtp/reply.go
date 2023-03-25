@@ -63,6 +63,7 @@ func replyCommandParameterNotImplemented() reply {
 	return reply{code: 504, lines: []string{"Command parameter not implemented"}}
 }
 
+// nolint:unused
 func replyMustIssueSTARTTLSFirst() reply {
 	return reply{code: 530, lines: []string{"Must issue a STARTTLS command first"}}
 }
@@ -71,18 +72,22 @@ func replyAuthenticationRequired() reply {
 	return reply{code: 530, lines: []string{"Authentication required"}}
 }
 
+// nolint:unused
 func replyAuthenticationSucceeded() reply {
 	return reply{code: 235, lines: []string{"Authentication succeeded"}}
 }
 
+// nolint:unused
 func replyAuthenticationMechanismInvalid() reply {
 	return reply{code: 504, lines: []string{"Invalid authentication mechanism"}}
 }
 
+// nolint:unused
 func replyAuthenticationCannotDecodeBase64() reply {
 	return reply{code: 501, lines: []string{"Cannot decode base64 authentication data"}}
 }
 
+// nolint:unused
 func replyAuthenticationPlainMissingInitialResponse() reply {
 	return reply{code: 334}
 }
