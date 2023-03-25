@@ -42,7 +42,7 @@ func replyTLSNotAvailable() reply {
 }
 
 func replyCommandUnrecognized() reply {
-	return reply{code: 500, lines: []string{"Syntax error, command unrecognized (This may include errors such as command line too long)"}}
+	return reply{code: 500, lines: []string{"Syntax error, command unrecognized"}}
 }
 
 func replySyntaxError() reply {
@@ -63,6 +63,7 @@ func replyCommandParameterNotImplemented() reply {
 	return reply{code: 504, lines: []string{"Command parameter not implemented"}}
 }
 
+// nolint:unused
 func replyMustIssueSTARTTLSFirst() reply {
 	return reply{code: 530, lines: []string{"Must issue a STARTTLS command first"}}
 }
@@ -71,9 +72,40 @@ func replyAuthenticationRequired() reply {
 	return reply{code: 530, lines: []string{"Authentication required"}}
 }
 
-func (s *session) reply(r reply) {
+// nolint:unused
+func replyAuthenticationSucceeded() reply {
+	return reply{code: 235, lines: []string{"Authentication succeeded"}}
+}
+
+// nolint:unused
+func replyAuthenticationMechanismInvalid() reply {
+	return reply{code: 504, lines: []string{"Invalid authentication mechanism"}}
+}
+
+// nolint:unused
+func replyAuthenticationCannotDecodeBase64() reply {
+	return reply{code: 501, lines: []string{"Cannot decode base64 authentication data"}}
+}
+
+// nolint:unused
+func replyAuthenticationPlainMissingInitialResponse() reply {
+	return reply{code: 334}
+}
+
+func (s *session) replyWithReply(r reply) {
 	for _, m := range r.lines[:len(r.lines)-1] {
 		fmt.Fprintf(s.rwc, "%d-%s\r\n", r.code, m)
 	}
 	fmt.Fprintf(s.rwc, "%d %s\r\n", r.code, r.lines[len(r.lines)-1])
+}
+
+func (s *session) reply(code uint, lines ...string) {
+	if len(lines) == 0 {
+		fmt.Fprintf(s.rwc, "%d \r\n", code)
+	}
+
+	for _, m := range lines[:len(lines)-1] {
+		fmt.Fprintf(s.rwc, "%d-%s\r\n", code, m)
+	}
+	fmt.Fprintf(s.rwc, "%d %s\r\n", code, lines[len(lines)-1])
 }
