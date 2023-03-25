@@ -94,17 +94,13 @@ func (s *session) replyWithReply(r reply) {
 	fmt.Fprintf(s.rwc, "%d %s\r\n", r.code, r.lines[len(r.lines)-1])
 }
 
-func (s *session) reply(code uint, lines ...string) error {
-	var err error
+func (s *session) reply(code uint, lines ...string) {
 	if len(lines) == 0 {
-		_, err = fmt.Fprintf(s.rwc, "%d \r\n", code)
-		return err
+		fmt.Fprintf(s.rwc, "%d \r\n", code)
 	}
 
 	for _, m := range lines[:len(lines)-1] {
-		_, err = fmt.Fprintf(s.rwc, "%d-%s\r\n", code, m)
+		fmt.Fprintf(s.rwc, "%d-%s\r\n", code, m)
 	}
-	_, err = fmt.Fprintf(s.rwc, "%d %s\r\n", code, lines[len(lines)-1])
-
-	return err
+	fmt.Fprintf(s.rwc, "%d %s\r\n", code, lines[len(lines)-1])
 }
