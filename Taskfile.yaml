@@ -1,0 +1,9 @@
+version: "3"
+
+tasks:
+  build:
+    cmds:
+      - mkdir -p ./bin
+      - go build -v -o ./bin/quokka ./cmd
+    generates:
+      - ./bin/quokka
