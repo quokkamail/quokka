@@ -17,7 +17,7 @@ var (
 
 // A Server defines parameters for running an SMTP server.
 type Server struct {
-	Addr      string
+	Address   string
 	TLSConfig *tls.Config
 
 	AuthenticationEncrypted bool
@@ -52,11 +52,11 @@ func (srv *Server) ListenAndServe() error {
 		return ErrServerClosed
 	}
 
-	if srv.Addr == "" {
+	if srv.Address == "" {
 		return ErrMissingServerAddr
 	}
 
-	ln, err := net.Listen("tcp", srv.Addr)
+	ln, err := net.Listen("tcp", srv.Address)
 	if err != nil {
 		return err
 	}
@@ -90,11 +90,11 @@ func (srv *Server) ListenAndServeTLS() error {
 		return ErrServerClosed
 	}
 
-	if srv.Addr == "" {
+	if srv.Address == "" {
 		return ErrMissingServerAddr
 	}
 
-	ln, err := net.Listen("tcp", srv.Addr)
+	ln, err := net.Listen("tcp", srv.Address)
 	if err != nil {
 		return err
 	}
