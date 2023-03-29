@@ -23,7 +23,7 @@ func NewConfigCmd() *cobra.Command {
 				return err
 			}
 
-			if err := os.WriteFile("config.toml", tomlBytes, 0666); err != nil {
+			if err := os.WriteFile("config.toml", tomlBytes, 0600); err != nil {
 				return err
 			}
 

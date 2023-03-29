@@ -1,11 +1,5 @@
-run:
-  tests: true
-  build-tags:
-    - integration
-  skip-files:
-    - ".*_gen.go$"
-
 linters:
+  disable-all: true
   enable:
     - asasalint
     - asciicheck
@@ -15,10 +9,8 @@ linters:
     - dogsled
     - durationcheck
     - errcheck
+    - errname
     - exportloopref
-    - gci
-    - gochecknoglobals
-    - gochecknoinits
     - goconst
     - gocritic
     - gofmt
@@ -27,7 +19,6 @@ linters:
     - gosimple
     - govet
     - ineffassign
-    - megacheck
     - misspell
     - nakedret
     - prealloc
@@ -39,32 +30,3 @@ linters:
     - unconvert
     - unparam
     - unused
-
-# output configuration options
-output:
-  # colored-line-number|line-number|json|tab|checkstyle|code-climate, default is "colored-line-number"
-  format: colored-line-number
-
-  # print lines of code with issue, default is true
-  print-issued-lines: true
-
-  # print linter name in the end of issue text, default is true
-  print-linter-name: true
-
-linters-settings:
-  gofmt:
-    simplify: true
-  goimports:
-    local-prefixes: github.com/quokkamail
-  gci:
-    sections:
-      - standard # Captures all standard packages if they do not match another section.
-      - default # Contains all imports that could not be matched to another section type.
-      - prefix(github.com/quokkamail)
-    section-separators:
-      - newLine
-  revive:
-    rules:
-      - name: unexported-return
-        severity: warning
-        disabled: true
