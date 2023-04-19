@@ -19,11 +19,15 @@ type TLS struct {
 	Key  string `toml:"key"`
 }
 
-type Relay struct {
+type SMTP struct {
 	Address string `toml:"address"`
 }
 
 type IMAP struct {
+	Address string `toml:"address"`
+}
+
+type IMAPS struct {
 	Address string `toml:"address"`
 }
 
@@ -32,6 +36,14 @@ type Submission struct {
 }
 
 type Submissions struct {
+	Address string `toml:"address"`
+}
+
+type Metrics struct {
+	Address string `toml:"address"`
+}
+
+type Pprof struct {
 	Address string `toml:"address"`
 }
 
@@ -44,26 +56,29 @@ type Auth struct {
 }
 
 type Config struct {
-	Auth            *Auth        `toml:"auth"`
-	IMAP            *IMAP        `toml:"imap"`
-	Queue           *Queue       `toml:"queue"`
-	SMTPRelay       *Relay       `toml:"smtp-relay"`
-	SMTPSubmission  *Submission  `toml:"smtp-submission"`
-	SMTPSubmissions *Submissions `toml:"smtp-submissions"`
-	TLS             *TLS         `toml:"tls"`
+	Auth        *Auth        `toml:"auth"`
+	IMAP        *IMAP        `toml:"imap"`
+	IMAPS       *IMAPS       `toml:"imaps"`
+	Metrics     *Metrics     `toml:"metrics"`
+	Pprof       *Pprof       `toml:"pprof"`
+	Queue       *Queue       `toml:"queue"`
+	SMTP        *SMTP        `toml:"smtp"`
+	Submission  *Submission  `toml:"submission"`
+	Submissions *Submissions `toml:"submissions"`
+	TLS         *TLS         `toml:"tls"`
 }
 
 var Default = Config{
-	SMTPRelay: &Relay{
+	SMTP: &SMTP{
 		Address: ":smtp",
 	},
 	IMAP: &IMAP{
 		Address: ":imap",
 	},
-	SMTPSubmission: &Submission{
+	Submission: &Submission{
 		Address: ":submission",
 	},
-	SMTPSubmissions: &Submissions{
+	Submissions: &Submissions{
 		Address: ":465",
 	},
 	TLS: &TLS{

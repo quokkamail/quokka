@@ -19,13 +19,14 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/textproto"
 	"strings"
 
 	"github.com/quokkamail/quokka/smtp/parser"
+	"golang.org/x/exp/slog"
 )
 
 type session struct {
@@ -54,7 +55,7 @@ func (s *session) serve() {
 				return
 			}
 
-			log.Printf("error: %s\n", err)
+			slog.Error(fmt.Errorf("smtp session: %w", err).Error())
 			return
 		}
 
@@ -181,7 +182,7 @@ func (s *session) handleDataCommand() {
 			return
 		}
 
-		log.Printf("error: %s\n", err)
+		slog.Error(fmt.Errorf("smtp session: %w", err).Error())
 		return
 	}
 
@@ -199,7 +200,7 @@ func (s *session) handleStartTLSCommand() {
 
 	tlsConn := tls.Server(s.rwc, s.srv.TLSConfig)
 	if err := tlsConn.Handshake(); err != nil {
-		log.Printf("error: %s\n", err)
+		slog.Error(fmt.Errorf("smtp session: %w", err).Error())
 		s.replyWithReply(replyTLSNotAvailable())
 		return
 	}
@@ -230,7 +231,7 @@ func (s *session) handleAuthCommand(cmdAndArgs string) {
 	initialResponseBytes, err := base64.StdEncoding.DecodeString(authCmd.InitialResponse)
 	if err != nil {
 		s.reply(501, "Cannot decode response")
-		log.Printf("error: %s\n", err)
+		slog.Error(fmt.Errorf("smtp session: %w", err).Error())
 		return
 	}
 	initialResponse := string(initialResponseBytes)
@@ -242,7 +243,7 @@ func (s *session) handleAuthCommand(cmdAndArgs string) {
 
 			initialResponse, err = s.txtReader.ReadLine()
 			if err != nil {
-				log.Printf("error: %s\n", err)
+				slog.Error(fmt.Errorf("smtp session: %w", err).Error())
 				return
 			}
 		}
