@@ -15,6 +15,7 @@
 package parser_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -26,32 +27,32 @@ func TestNewMailCommand(t *testing.T) {
 		cmdAndArgs string
 	}
 
-	tests := []struct {
+	testCases := []struct {
 		name    string
 		args    args
 		want    *parser.MailCommand
-		wantErr bool
+		wantErr error
 	}{
 		{
 			name: "InvalidName",
 			args: args{
 				cmdAndArgs: "MELA",
 			},
-			wantErr: true,
+			wantErr: parser.ErrMailCommandInvalid,
 		},
 		{
 			name: "NoArguments",
 			args: args{
 				cmdAndArgs: "MAIL",
 			},
-			wantErr: true,
+			wantErr: parser.ErrMailCommandInvalid,
 		},
 		{
 			name: "NoReversePath",
 			args: args{
 				cmdAndArgs: "MAIL FROM:",
 			},
-			wantErr: true,
+			wantErr: parser.ErrMailCommandInvalid,
 		},
 		{
 			name: "Valid",
@@ -82,16 +83,16 @@ func TestNewMailCommand(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parser.NewMailCommand(tt.args.cmdAndArgs)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewMailCommand() error = %v, wantErr %v", err, tt.wantErr)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := parser.NewMailCommand(tc.args.cmdAndArgs)
+			if err != nil && !errors.Is(err, tc.wantErr) {
+				t.Errorf("NewMailCommand() error = %v, wantErr %v", err, tc.wantErr)
 				return
 			}
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewMailCommand() = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("NewMailCommand() = %v, want %v", got, tc.want)
 			}
 		})
 	}

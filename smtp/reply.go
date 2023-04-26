@@ -16,39 +16,20 @@ package smtp
 
 import "fmt"
 
+const (
+	genericOkReply              string = "2.0.0 Requested mail action okay, completed"
+	badSequenceReply            string = "5.5.1 Bad sequence of commands"
+	syntaxErrorReply            string = "5.5.4 Syntax error in parameters or arguments"
+	authenticationRequiredReply string = "5.7.0 Authentication required"
+)
+
 type reply struct {
 	code  int
 	lines []string
 }
 
-func replyReady(domain string) reply {
-	return reply{code: 220, lines: []string{fmt.Sprintf("%s Service ready", domain)}}
-}
-
 func replyReadyToStartTLS() reply {
 	return reply{code: 220, lines: []string{"Ready to start TLS"}}
-}
-
-func replyClosingConnection(domain string) reply {
-	return reply{code: 221, lines: []string{fmt.Sprintf("%s Service closing transmission channel", domain)}}
-}
-
-func replyOk() reply {
-	return reply{code: 250, lines: []string{"Requested mail action okay, completed"}}
-}
-
-func replyHeloOk() reply {
-	return reply{code: 250, lines: []string{"Hello, nice to meet you"}}
-}
-
-func replyEhloOk(extensions []string) reply {
-	lines := []string{"Hello, nice to meet you"}
-	lines = append(lines, extensions...)
-	return reply{code: 250, lines: lines}
-}
-
-func replyStartMailInput() reply {
-	return reply{code: 354, lines: []string{"Start mail input; end with <CRLF>.<CRLF>"}}
 }
 
 func replyTLSNotAvailable() reply {
@@ -59,17 +40,9 @@ func replyCommandUnrecognized() reply {
 	return reply{code: 500, lines: []string{"Syntax error, command unrecognized"}}
 }
 
-func replySyntaxError() reply {
-	return reply{code: 501, lines: []string{"Syntax error in parameters or arguments"}}
-}
-
 // nolint:unused
 func replyCommandNotImplemented() reply {
 	return reply{code: 502, lines: []string{"Command not implemented"}}
-}
-
-func replyBadSequence() reply {
-	return reply{code: 503, lines: []string{"Bad sequence of commands"}}
 }
 
 // nolint:unused

@@ -15,6 +15,7 @@
 package parser_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -26,25 +27,25 @@ func TestNewAuthCommand(t *testing.T) {
 		cmdAndArgs string
 	}
 
-	tests := []struct {
+	testCases := []struct {
 		name    string
 		args    args
 		want    *parser.AuthCommand
-		wantErr bool
+		wantErr error
 	}{
 		{
 			name: "InvalidName",
 			args: args{
 				cmdAndArgs: "AUTO",
 			},
-			wantErr: true,
+			wantErr: parser.ErrAuthCommandInvalid,
 		},
 		{
 			name: "NoArguments",
 			args: args{
 				cmdAndArgs: "AUTH",
 			},
-			wantErr: true,
+			wantErr: parser.ErrAuthCommandInvalid,
 		},
 		{
 			name: "Valid",
@@ -67,16 +68,16 @@ func TestNewAuthCommand(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parser.NewAuthCommand(tt.args.cmdAndArgs)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewAuthCommand() error = %v, wantErr %v", err, tt.wantErr)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := parser.NewAuthCommand(tc.args.cmdAndArgs)
+			if err != nil && !errors.Is(err, tc.wantErr) {
+				t.Errorf("NewAuthCommand() error = %v, wantErr %v", err, tc.wantErr)
 				return
 			}
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewAuthCommand() = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("NewAuthCommand() = %v, want %v", got, tc.want)
 			}
 		})
 	}

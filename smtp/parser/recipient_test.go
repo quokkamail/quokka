@@ -15,6 +15,7 @@
 package parser_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -26,32 +27,32 @@ func TestNewRecipientCommand(t *testing.T) {
 		cmdAndArgs string
 	}
 
-	tests := []struct {
+	testCases := []struct {
 		name    string
 		args    args
 		want    *parser.RecipientCommand
-		wantErr bool
+		wantErr error
 	}{
 		{
 			name: "InvalidName",
 			args: args{
 				cmdAndArgs: "RECI",
 			},
-			wantErr: true,
+			wantErr: parser.ErrRecipientCommandInvalid,
 		},
 		{
 			name: "NoArguments",
 			args: args{
 				cmdAndArgs: "MAIL",
 			},
-			wantErr: true,
+			wantErr: parser.ErrRecipientCommandInvalid,
 		},
 		{
 			name: "NoReversePath",
 			args: args{
 				cmdAndArgs: "RCPT TO:",
 			},
-			wantErr: true,
+			wantErr: parser.ErrRecipientCommandInvalid,
 		},
 		{
 			name: "Valid",
@@ -82,16 +83,16 @@ func TestNewRecipientCommand(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parser.NewRecipientCommand(tt.args.cmdAndArgs)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewRecipientCommand() error = %v, wantErr %v", err, tt.wantErr)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := parser.NewRecipientCommand(tc.args.cmdAndArgs)
+			if err != nil && !errors.Is(err, tc.wantErr) {
+				t.Errorf("NewRecipientCommand() error = %v, wantErr %v", err, tc.wantErr)
 				return
 			}
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewRecipientCommand() = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("NewRecipientCommand() = %v, want %v", got, tc.want)
 			}
 		})
 	}
