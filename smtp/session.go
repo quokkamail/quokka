@@ -83,7 +83,7 @@ func (s *session) serve() {
 		case "AUTH":
 			s.handleAuthCommand(cmdAndArgs)
 		default:
-			s.replyWithReply(replyCommandUnrecognized())
+			s.reply(500, "5.5.2 Syntax error, command unrecognized")
 		}
 	}
 }

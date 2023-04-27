@@ -15,11 +15,10 @@
 package parser_test
 
 import (
-	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/quokkamail/quokka/smtp/parser"
+	"github.com/shoenig/test/must"
 )
 
 func TestNewMailCommand(t *testing.T) {
@@ -83,17 +82,17 @@ func TestNewMailCommand(t *testing.T) {
 		},
 	}
 
+	t.Parallel()
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := parser.NewMailCommand(tc.args.cmdAndArgs)
-			if err != nil && !errors.Is(err, tc.wantErr) {
-				t.Errorf("NewMailCommand() error = %v, wantErr %v", err, tc.wantErr)
-				return
-			}
+			tc := tc
 
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("NewMailCommand() = %v, want %v", got, tc.want)
-			}
+			t.Parallel()
+
+			got, err := parser.NewMailCommand(tc.args.cmdAndArgs)
+			must.Eq(t, tc.wantErr, err)
+			must.Eq(t, tc.want, got)
 		})
 	}
 }
