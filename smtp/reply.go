@@ -28,16 +28,8 @@ type reply struct {
 	lines []string
 }
 
-func replyReadyToStartTLS() reply {
-	return reply{code: 220, lines: []string{"Ready to start TLS"}}
-}
-
 func replyTLSNotAvailable() reply {
 	return reply{code: 454, lines: []string{"TLS not available due to temporary reason"}}
-}
-
-func replyCommandUnrecognized() reply {
-	return reply{code: 500, lines: []string{"Syntax error, command unrecognized"}}
 }
 
 // nolint:unused
