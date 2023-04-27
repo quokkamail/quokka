@@ -23,61 +23,6 @@ const (
 	authenticationRequiredReply string = "5.7.0 Authentication required"
 )
 
-type reply struct {
-	code  int
-	lines []string
-}
-
-func replyTLSNotAvailable() reply {
-	return reply{code: 454, lines: []string{"TLS not available due to temporary reason"}}
-}
-
-// nolint:unused
-func replyCommandNotImplemented() reply {
-	return reply{code: 502, lines: []string{"Command not implemented"}}
-}
-
-// nolint:unused
-func replyCommandParameterNotImplemented() reply {
-	return reply{code: 504, lines: []string{"Command parameter not implemented"}}
-}
-
-// nolint:unused
-func replyMustIssueSTARTTLSFirst() reply {
-	return reply{code: 530, lines: []string{"Must issue a STARTTLS command first"}}
-}
-
-func replyAuthenticationRequired() reply {
-	return reply{code: 530, lines: []string{"Authentication required"}}
-}
-
-// nolint:unused
-func replyAuthenticationSucceeded() reply {
-	return reply{code: 235, lines: []string{"Authentication succeeded"}}
-}
-
-// nolint:unused
-func replyAuthenticationMechanismInvalid() reply {
-	return reply{code: 504, lines: []string{"Invalid authentication mechanism"}}
-}
-
-// nolint:unused
-func replyAuthenticationCannotDecodeBase64() reply {
-	return reply{code: 501, lines: []string{"Cannot decode base64 authentication data"}}
-}
-
-// nolint:unused
-func replyAuthenticationPlainMissingInitialResponse() reply {
-	return reply{code: 334}
-}
-
-func (s *session) replyWithReply(r reply) {
-	for _, m := range r.lines[:len(r.lines)-1] {
-		fmt.Fprintf(s.rwc, "%d-%s\r\n", r.code, m)
-	}
-	fmt.Fprintf(s.rwc, "%d %s\r\n", r.code, r.lines[len(r.lines)-1])
-}
-
 func (s *session) reply(code uint, lines ...string) {
 	if len(lines) == 0 {
 		fmt.Fprintf(s.rwc, "%d \r\n", code)

@@ -169,7 +169,7 @@ func (s *session) handleNoopCommand() {
 
 func (s *session) handleDataCommand() {
 	if s.isNotAuthenticatedWhenMandatory() {
-		s.replyWithReply(replyAuthenticationRequired())
+		s.reply(530, "Authentication required")
 		return
 	}
 
@@ -205,7 +205,7 @@ func (s *session) handleStartTLSCommand() {
 	tlsConn := tls.Server(s.rwc, s.srv.TLSConfig)
 	if err := tlsConn.Handshake(); err != nil {
 		slog.Error(fmt.Errorf("smtp session: %w", err).Error())
-		s.replyWithReply(replyTLSNotAvailable())
+		s.reply(454, "TLS not available due to temporary reason")
 		return
 	}
 
