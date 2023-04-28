@@ -25,11 +25,12 @@ const (
 
 func (s *session) reply(code uint, lines ...string) {
 	if len(lines) == 0 {
-		fmt.Fprintf(s.rwc, "%d \r\n", code)
+		fmt.Fprintf(s.conn, "%d \r\n", code)
+		return
 	}
 
 	for _, m := range lines[:len(lines)-1] {
-		fmt.Fprintf(s.rwc, "%d-%s\r\n", code, m)
+		fmt.Fprintf(s.conn, "%d-%s\r\n", code, m)
 	}
-	fmt.Fprintf(s.rwc, "%d %s\r\n", code, lines[len(lines)-1])
+	fmt.Fprintf(s.conn, "%d %s\r\n", code, lines[len(lines)-1])
 }

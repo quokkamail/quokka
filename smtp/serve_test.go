@@ -171,6 +171,8 @@ func TestNoopCommand(t *testing.T) {
 }
 
 func TestMailCommand(t *testing.T) {
+	t.Parallel()
+
 	type command struct {
 		command     string
 		wantCode    int
@@ -218,12 +220,10 @@ func TestMailCommand(t *testing.T) {
 		},
 	}
 
-	t.Parallel()
-
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tc := tc
+		tc := tc
 
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			s := NewTestServer(t)
@@ -245,6 +245,8 @@ func TestMailCommand(t *testing.T) {
 }
 
 func TestRcptCommand(t *testing.T) {
+	t.Parallel()
+
 	type command struct {
 		command     string
 		wantCode    int
@@ -297,12 +299,10 @@ func TestRcptCommand(t *testing.T) {
 		},
 	}
 
-	t.Parallel()
-
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tc := tc
+		tc := tc
 
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			s := NewTestServer(t)

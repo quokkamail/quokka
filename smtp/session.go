@@ -31,7 +31,7 @@ import (
 
 type session struct {
 	authenticated bool
-	rwc           net.Conn
+	conn          net.Conn
 	srv           *Server
 	tls           bool
 	txtReader     *textproto.Reader
@@ -44,7 +44,7 @@ type session struct {
 func (s *session) serve() {
 	s.reply(220, fmt.Sprintf("%s ESMTP service ready", s.srv.Domain))
 
-	s.txtReader = textproto.NewReader(bufio.NewReader(s.rwc))
+	s.txtReader = textproto.NewReader(bufio.NewReader(s.conn))
 
 	for {
 		// s.rwc.SetReadDeadline()
@@ -155,7 +155,7 @@ func (s *session) handleHeloCommand() {
 
 func (s *session) handleQuitCommand() {
 	s.reply(221, fmt.Sprintf("2.0.0 %s service closing transmission channel", s.srv.Domain))
-	s.rwc.Close()
+	s.conn.Close()
 }
 
 func (s *session) handleRsetCommand() {
@@ -202,15 +202,15 @@ func (s *session) handleStartTLSCommand() {
 
 	s.reply(220, "Ready to start TLS")
 
-	tlsConn := tls.Server(s.rwc, s.srv.TLSConfig)
+	tlsConn := tls.Server(s.conn, s.srv.TLSConfig)
 	if err := tlsConn.Handshake(); err != nil {
 		slog.Error(fmt.Errorf("smtp session: %w", err).Error())
 		s.reply(454, "TLS not available due to temporary reason")
 		return
 	}
 
-	s.rwc = tlsConn
-	s.txtReader = textproto.NewReader(bufio.NewReader(s.rwc))
+	s.conn = tlsConn
+	s.txtReader = textproto.NewReader(bufio.NewReader(s.conn))
 	s.tls = true
 	s.reset()
 }

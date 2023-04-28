@@ -22,6 +22,8 @@ import (
 )
 
 func TestNewRecipientCommand(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		cmdAndArgs string
 	}
@@ -82,12 +84,10 @@ func TestNewRecipientCommand(t *testing.T) {
 		},
 	}
 
-	t.Parallel()
-
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tc := tc
+		tc := tc
 
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			got, err := parser.NewRecipientCommand(tc.args.cmdAndArgs)
