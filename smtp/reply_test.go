@@ -12,60 +12,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package parser_test
+package smtp
 
 import (
+	"io"
+	"net"
 	"testing"
 
-	"github.com/quokkamail/quokka/smtp/parser"
 	"github.com/shoenig/test/must"
 )
 
-func TestNewAuthCommand(t *testing.T) {
+func Test_session_reply(t *testing.T) {
 	t.Parallel()
 
 	type args struct {
-		cmdAndArgs string
+		code  uint
+		lines []string
 	}
 
 	testCases := []struct {
-		name    string
-		args    args
-		want    *parser.AuthCommand
-		wantErr error
+		name string
+		args args
+		want string
 	}{
 		{
-			name: "InvalidName",
+			name: "OneLine",
 			args: args{
-				cmdAndArgs: "AUTO",
+				code:  250,
+				lines: []string{"Line1"},
 			},
-			wantErr: parser.ErrAuthCommandInvalid,
+			want: "250 Line1\r\n",
 		},
 		{
-			name: "NoArguments",
+			name: "MultipleLines",
 			args: args{
-				cmdAndArgs: "AUTH",
+				code:  250,
+				lines: []string{"Line1", "Line2", "Line3"},
 			},
-			wantErr: parser.ErrAuthCommandInvalid,
+			want: "250-Line1\r\n250-Line2\r\n250 Line3\r\n",
 		},
 		{
-			name: "Valid",
+			name: "NoLines",
 			args: args{
-				cmdAndArgs: "AUTH PLAIN",
+				code:  250,
+				lines: []string{},
 			},
-			want: &parser.AuthCommand{
-				Mechanism: "PLAIN",
-			},
-		},
-		{
-			name: "ValidWithInitialResponse",
-			args: args{
-				cmdAndArgs: "AUTH PLAIN =",
-			},
-			want: &parser.AuthCommand{
-				Mechanism:       "PLAIN",
-				InitialResponse: "=",
-			},
+			want: "250 \r\n",
 		},
 	}
 
@@ -75,9 +67,21 @@ func TestNewAuthCommand(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := parser.NewAuthCommand(tc.args.cmdAndArgs)
-			must.Eq(t, tc.wantErr, err)
-			must.Eq(t, tc.want, got)
+			client, server := net.Pipe()
+
+			s := &session{
+				conn: server,
+			}
+
+			go func() {
+				s.reply(tc.args.code, tc.args.lines...)
+
+				server.Close()
+			}()
+
+			data, err := io.ReadAll(client)
+			must.NoError(t, err)
+			must.Eq(t, tc.want, string(data))
 		})
 	}
 }

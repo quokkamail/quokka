@@ -54,7 +54,7 @@ func (srv *Server) Close() error {
 	defer srv.mu.Unlock()
 
 	for s := range srv.sessions {
-		s.rwc.Close()
+		s.conn.Close()
 		delete(srv.sessions, s)
 	}
 
@@ -93,7 +93,7 @@ func (srv *Server) Serve(l net.Listener) error {
 
 		_, isTLS := rw.(*tls.Conn)
 
-		s := &session{srv: srv, rwc: rw, tls: isTLS}
+		s := &session{srv: srv, conn: rw, tls: isTLS}
 		srv.trackSession(s, true)
 		go s.serve()
 	}

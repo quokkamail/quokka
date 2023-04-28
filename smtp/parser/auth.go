@@ -36,7 +36,7 @@ func NewAuthCommand(cmdAndArgs string) (*AuthCommand, error) {
 	args := strings.Split(strings.Trim(cmdAndArgs[4:], " "), " ")
 
 	if args[0] == "" {
-		return nil, ErrMailCommandInvalid
+		return nil, ErrAuthCommandInvalid
 	}
 
 	mechanism := strings.ToUpper(args[0])

@@ -15,43 +15,45 @@
 package parser_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/quokkamail/quokka/smtp/parser"
+	"github.com/shoenig/test/must"
 )
 
 func TestNewRecipientCommand(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		cmdAndArgs string
 	}
 
-	tests := []struct {
+	testCases := []struct {
 		name    string
 		args    args
 		want    *parser.RecipientCommand
-		wantErr bool
+		wantErr error
 	}{
 		{
 			name: "InvalidName",
 			args: args{
 				cmdAndArgs: "RECI",
 			},
-			wantErr: true,
+			wantErr: parser.ErrRecipientCommandInvalid,
 		},
 		{
 			name: "NoArguments",
 			args: args{
 				cmdAndArgs: "MAIL",
 			},
-			wantErr: true,
+			wantErr: parser.ErrRecipientCommandInvalid,
 		},
 		{
 			name: "NoReversePath",
 			args: args{
 				cmdAndArgs: "RCPT TO:",
 			},
-			wantErr: true,
+			wantErr: parser.ErrRecipientCommandInvalid,
 		},
 		{
 			name: "Valid",
@@ -82,17 +84,15 @@ func TestNewRecipientCommand(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parser.NewRecipientCommand(tt.args.cmdAndArgs)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewRecipientCommand() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+	for _, tc := range testCases {
+		tc := tc
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewRecipientCommand() = %v, want %v", got, tt.want)
-			}
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := parser.NewRecipientCommand(tc.args.cmdAndArgs)
+			must.Eq(t, tc.wantErr, err)
+			must.Eq(t, tc.want, got)
 		})
 	}
 }

@@ -31,7 +31,7 @@ import (
 
 type session struct {
 	authenticated bool
-	rwc           net.Conn
+	conn          net.Conn
 	srv           *Server
 	tls           bool
 	txtReader     *textproto.Reader
@@ -42,9 +42,9 @@ type session struct {
 }
 
 func (s *session) serve() {
-	s.replyWithReply(replyReady(s.srv.Domain))
+	s.reply(220, fmt.Sprintf("%s ESMTP service ready", s.srv.Domain))
 
-	s.txtReader = textproto.NewReader(bufio.NewReader(s.rwc))
+	s.txtReader = textproto.NewReader(bufio.NewReader(s.conn))
 
 	for {
 		// s.rwc.SetReadDeadline()
@@ -83,7 +83,7 @@ func (s *session) serve() {
 		case "AUTH":
 			s.handleAuthCommand(cmdAndArgs)
 		default:
-			s.replyWithReply(replyCommandUnrecognized())
+			s.reply(500, "5.5.2 Syntax error, command unrecognized")
 		}
 	}
 }
@@ -96,85 +96,89 @@ func (s *session) reset() {
 
 func (s *session) handleMailCommand(cmdAndArgs string) {
 	if s.isNotAuthenticatedWhenMandatory() {
-		s.replyWithReply(replyAuthenticationRequired())
+		s.reply(530, authenticationRequiredReply)
 		return
 	}
 
 	if s.mailFrom != "" {
-		s.replyWithReply(replyBadSequence())
+		s.reply(503, badSequenceReply)
 		return
 	}
 
 	mailCmd, err := parser.NewMailCommand(cmdAndArgs)
 	if err != nil {
-		s.replyWithReply(replySyntaxError())
+		s.reply(501, syntaxErrorReply)
 		return
 	}
 
 	s.mailFrom = mailCmd.ReversePath
-	s.replyWithReply(replyOk())
+	s.reply(250, "2.1.0 Requested mail action okay, completed")
 }
 
 func (s *session) handleRcptCommand(cmdAndArgs string) {
 	if s.isNotAuthenticatedWhenMandatory() {
-		s.replyWithReply(replyAuthenticationRequired())
+		s.reply(530, authenticationRequiredReply)
 		return
 	}
 
 	if s.mailFrom == "" {
-		s.replyWithReply(replyBadSequence())
+		s.reply(503, badSequenceReply)
 		return
 	}
 
 	recipientCmd, err := parser.NewRecipientCommand(cmdAndArgs)
 	if err != nil {
-		s.replyWithReply(replySyntaxError())
+		s.reply(501, syntaxErrorReply)
 		return
 	}
 
 	s.rcptTo = append(s.rcptTo, recipientCmd.ForwardPath)
-	s.replyWithReply(replyOk())
+	s.reply(250, "2.1.5 Requested mail action okay, completed")
 }
 
 func (s *session) handleEhloCommand() {
-	extensions := []string{"AUTH PLAIN", "PIPELINING"}
+	extensions := []string{
+		"Hello, nice to meet you",
+		"AUTH PLAIN", "ENHANCEDSTATUSCODES", "PIPELINING",
+	}
+
 	if !s.tls {
 		extensions = append(extensions, "STARTTLS")
 	}
 
-	s.replyWithReply(replyEhloOk(extensions))
+	s.reply(250, extensions...)
 }
 
 func (s *session) handleHeloCommand() {
-	s.replyWithReply(replyHeloOk())
+	s.reply(250, "Hello, nice to meet you")
 }
 
 func (s *session) handleQuitCommand() {
-	s.replyWithReply(replyClosingConnection(s.srv.Domain))
-	s.rwc.Close()
+	s.reply(221, fmt.Sprintf("2.0.0 %s service closing transmission channel", s.srv.Domain))
+	s.conn.Close()
 }
 
 func (s *session) handleRsetCommand() {
 	s.reset()
-	s.replyWithReply(replyOk())
+	s.reply(250, genericOkReply)
 }
 
 func (s *session) handleNoopCommand() {
-	s.replyWithReply(replyOk())
+	s.reply(250, genericOkReply)
 }
 
 func (s *session) handleDataCommand() {
 	if s.isNotAuthenticatedWhenMandatory() {
-		s.replyWithReply(replyAuthenticationRequired())
+		s.reply(530, "Authentication required")
 		return
 	}
 
 	if s.mailFrom == "" || len(s.rcptTo) == 0 {
-		s.replyWithReply(replyBadSequence())
+		s.reply(503, badSequenceReply)
 		return
 	}
 
-	s.replyWithReply(replyStartMailInput())
+	s.reply(354, "Start mail input; end with <CRLF>.<CRLF>")
 
 	dl, err := s.txtReader.ReadDotLines()
 	if err != nil {
@@ -187,26 +191,26 @@ func (s *session) handleDataCommand() {
 	}
 
 	s.data = dl
-	s.replyWithReply(replyOk())
+	s.reply(250, genericOkReply)
 }
 
 func (s *session) handleStartTLSCommand() {
 	if s.tls {
-		s.replyWithReply(replyBadSequence())
+		s.reply(503, badSequenceReply)
 		return
 	}
 
-	s.replyWithReply(replyReadyToStartTLS())
+	s.reply(220, "Ready to start TLS")
 
-	tlsConn := tls.Server(s.rwc, s.srv.TLSConfig)
+	tlsConn := tls.Server(s.conn, s.srv.TLSConfig)
 	if err := tlsConn.Handshake(); err != nil {
 		slog.Error(fmt.Errorf("smtp session: %w", err).Error())
-		s.replyWithReply(replyTLSNotAvailable())
+		s.reply(454, "TLS not available due to temporary reason")
 		return
 	}
 
-	s.rwc = tlsConn
-	s.txtReader = textproto.NewReader(bufio.NewReader(s.rwc))
+	s.conn = tlsConn
+	s.txtReader = textproto.NewReader(bufio.NewReader(s.conn))
 	s.tls = true
 	s.reset()
 }
@@ -218,13 +222,13 @@ func (s *session) handleAuthCommand(cmdAndArgs string) {
 	}
 
 	if s.authenticated {
-		s.reply(503, "Bad sequence of commands")
+		s.reply(503, badSequenceReply)
 		return
 	}
 
 	authCmd, err := parser.NewAuthCommand(cmdAndArgs)
 	if err != nil {
-		s.reply(501, "Syntax error in parameters or arguments")
+		s.reply(501, syntaxErrorReply)
 		return
 	}
 
@@ -254,7 +258,7 @@ func (s *session) handleAuthCommand(cmdAndArgs string) {
 		}
 
 		// TODO: real authentication
-		s.reply(235, "Authentication succeeded")
+		s.reply(235, "2.7.0 Authentication succeeded")
 	default:
 		s.reply(504, "Unrecognized authentication mechanism")
 	}

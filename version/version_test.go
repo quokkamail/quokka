@@ -21,7 +21,9 @@ import (
 )
 
 func TestVersion_String(t *testing.T) {
-	tests := []struct {
+	t.Parallel()
+
+	testCases := []struct {
 		name    string
 		version *version.Version
 		want    string
@@ -82,10 +84,14 @@ func TestVersion_String(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.version.String(); got != tt.want {
-				t.Errorf("Version.String() = %v, want %v", got, tt.want)
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := tc.version.String(); got != tc.want {
+				t.Errorf("Version.String() = %v, want %v", got, tc.want)
 			}
 		})
 	}
