@@ -1,0 +1,47 @@
+# Domain used in welcome messages
+domain = "mail.quokka.local"
+
+# SMTP (inbound) server configuration
+[smtp]
+address = ":25"
+
+# SMTP submission (outbound) server configuration
+[submission]
+address = ":587"
+
+# SMTP submissions (outbound with implicit TLS) server configuration
+[submissions]
+address = ":465"
+
+# IMAP server configuration
+[imap]
+address = ":443"
+
+# IMAPS (with implicit TLS) server configuration
+[imaps]
+address = ":993"
+
+# Metrics server configuration
+# The metrics are exported with the Prometheus format on /metrics path
+[metrics]
+address = "localhost:2112"
+
+# Profiling metrics server configuration
+# The metrics are exported with the pprof proto on /debug/pprof path
+[profiling]
+address = "localhost:6060"
+
+# TLS configuration
+[tls]
+cert = "cert.pem"
+key = "key.pem"
+
+# Authentication configuration
+# Driver can be one of: sqlite3
+[auth]
+driver = "sqlite3"
+
+[storage]
+path = "store"
+
+[spf]

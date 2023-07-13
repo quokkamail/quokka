@@ -20,7 +20,6 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 var (
@@ -37,10 +36,6 @@ type Server struct {
 	AuthenticationEncrypted bool
 	AuthenticationMandatory bool
 	Domain                  string
-
-	Initial220MessageTimeout time.Duration
-	MailCommandTimeout       time.Duration
-	RcptCommandTimeout       time.Duration
 
 	inShutdown atomic.Bool
 	mu         sync.Mutex
@@ -84,9 +79,9 @@ func (srv *Server) Serve(l net.Listener) error {
 	for {
 		rw, err := l.Accept()
 		if err != nil {
-			// if srv.shuttingDown() {
-			// 	return ErrServerClosed
-			// }
+			if srv.shuttingDown() {
+				return ErrServerClosed
+			}
 
 			return err
 		}

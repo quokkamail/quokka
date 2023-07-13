@@ -15,10 +15,7 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slog"
 )
 
 func NewRootCmd() *cobra.Command {
@@ -28,8 +25,8 @@ func NewRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			logger := slog.New(slog.NewTextHandler(os.Stderr))
-			slog.SetDefault(logger)
+			// logger := slog.New(slog.NewTextHandler(os.Stderr))
+			// slog.SetDefault(logger)
 			return nil
 		},
 	}

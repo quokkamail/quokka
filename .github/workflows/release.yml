@@ -12,43 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: CodeQL
+name: Release
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  schedule:
-    - cron: 20 4 * * 1
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
-  analyze:
-    name: Analyze
+  release:
+    name: Release
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [go]
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3.5.3
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2.20.1
         with:
-          languages: ${{ matrix.language }}
+          fetch-depth: 0
 
-      - name: Run autobuild
-        uses: github/codeql-action/autobuild@v2.20.1
+      - name: Fetch tags
+        run: git fetch --force --tags
 
-      - name: Run CodeQL analysis
-        uses: github/codeql-action/analyze@v2.20.1
+      - name: Set up Go
+        uses: actions/setup-go@v4.0.1
         with:
-          category: /language:${{matrix.language}}
+          go-version: "1.20.5"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v4.3.0
+        with:
+          version: "1.19.0"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -25,34 +25,34 @@ jobs:
     name: License
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3.5.3
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v4.0.1
         with:
-          go-version: "1.20"
+          go-version: "1.20.5"
 
       - name: Install addlicense
         run: go install github.com/google/addlicense@v1.1.1
 
-      - name: License check
+      - name: Check license
         run: addlicense -v -check .
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3.5.3
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v4.0.1
         with:
-          go-version: "1.20"
+          go-version: "1.20.5"
 
-      - name: Lint
-        uses: golangci/golangci-lint-action@v3.4.0
+      - name: Lint project
+        uses: golangci/golangci-lint-action@v3.6.0
         with:
           version: v1.51.2
           skip-cache: true
@@ -62,19 +62,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: [license, lint]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3.5.3
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v4.0.1
         with:
-          go-version: "1.20"
+          go-version: "1.20.5"
 
-      - name: Build
+      - name: Build project
         run: go build -v .
 
-      - name: Test
+      - name: Test project
         run: go test -v ./... -race -coverprofile=coverage.out -covermode=atomic
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
+      - name: Upload test coverage
+        uses: codecov/codecov-action@v3.1.4

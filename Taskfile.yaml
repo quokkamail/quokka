@@ -17,10 +17,9 @@ version: "3"
 tasks:
   build:
     cmds:
-      - mkdir -p ./bin
-      - go build -v -o ./bin/quokka .
+      - go build -v .
     generates:
-      - ./bin/quokka
+      - quokka
 
   test:
     cmds:

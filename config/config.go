@@ -43,7 +43,7 @@ type Metrics struct {
 	Address string `toml:"address"`
 }
 
-type Pprof struct {
+type Profiling struct {
 	Address string `toml:"address"`
 }
 
@@ -52,43 +52,27 @@ type Queue struct {
 }
 
 type Auth struct {
-	// RequireTLS bool `toml:"require_tls"`
+}
+
+type SPF struct {
+}
+
+type Log struct {
+	Level string
 }
 
 type Config struct {
+	Domain      string       `toml:"domain"`
+	Log         *Log         `toml:"log"`
 	Auth        *Auth        `toml:"auth"`
 	IMAP        *IMAP        `toml:"imap"`
 	IMAPS       *IMAPS       `toml:"imaps"`
 	Metrics     *Metrics     `toml:"metrics"`
-	Pprof       *Pprof       `toml:"pprof"`
+	Profiling   *Profiling   `toml:"profiling"`
 	Queue       *Queue       `toml:"queue"`
 	SMTP        *SMTP        `toml:"smtp"`
+	SPF         *SPF         `toml:"spf"`
 	Submission  *Submission  `toml:"submission"`
 	Submissions *Submissions `toml:"submissions"`
 	TLS         *TLS         `toml:"tls"`
-}
-
-var Default = Config{
-	SMTP: &SMTP{
-		Address: ":smtp",
-	},
-	IMAP: &IMAP{
-		Address: ":imap",
-	},
-	Submission: &Submission{
-		Address: ":submission",
-	},
-	Submissions: &Submissions{
-		Address: ":465",
-	},
-	TLS: &TLS{
-		Cert: "cert.pem",
-		Key:  "key.pem",
-	},
-	Auth: &Auth{
-		// RequireTLS: true,
-	},
-	Queue: &Queue{
-		Provider: "inmemory",
-	},
 }

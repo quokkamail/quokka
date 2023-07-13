@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 
@@ -27,7 +28,6 @@ import (
 	"github.com/quokkamail/quokka/pprof"
 	"github.com/quokkamail/quokka/smtp"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slog"
 )
 
 type runServeOptions struct {
@@ -93,7 +93,7 @@ func runServe(opts runServeOptions) error {
 
 		smtpSrv = &smtp.Server{
 			Address:                 config.SMTP.Address,
-			Domain:                  "quokka.local",
+			Domain:                  config.Domain,
 			TLSConfig:               tlsConfig,
 			AuthenticationEncrypted: true,
 		}
@@ -111,7 +111,7 @@ func runServe(opts runServeOptions) error {
 
 		submissionSrv = &smtp.Server{
 			Address:                 config.Submission.Address,
-			Domain:                  "quokka.local",
+			Domain:                  config.Domain,
 			TLSConfig:               tlsConfig,
 			AuthenticationEncrypted: true,
 			AuthenticationMandatory: true,
@@ -130,14 +130,14 @@ func runServe(opts runServeOptions) error {
 
 		submissionsSrv = &smtp.Server{
 			Address:                 config.Submissions.Address,
-			Domain:                  "quokka.local",
+			Domain:                  config.Domain,
 			TLSConfig:               tlsConfig,
 			AuthenticationEncrypted: true,
 			AuthenticationMandatory: true,
 		}
 
 		go func() {
-			if err := submissionsSrv.ListenAndServe(); err != nil {
+			if err := submissionsSrv.ListenAndServeTLS(); err != nil {
 				slog.Error(fmt.Errorf("submissions server: %w", err).Error())
 			}
 		}()
@@ -167,11 +167,11 @@ func runServe(opts runServeOptions) error {
 	}
 
 	var pprofServer *pprof.Server
-	if config.Pprof != nil {
-		slog.Info("starting pprof server", "address", config.Pprof.Address)
+	if config.Profiling != nil {
+		slog.Info("starting pprof server", "address", config.Profiling.Address)
 
 		pprofServer = &pprof.Server{
-			Address: config.Pprof.Address,
+			Address: config.Profiling.Address,
 		}
 
 		go func() {

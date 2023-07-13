@@ -21,12 +21,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/textproto"
 	"strings"
 
 	"github.com/quokkamail/quokka/smtp/parser"
-	"golang.org/x/exp/slog"
 )
 
 type session struct {
@@ -42,7 +42,7 @@ type session struct {
 }
 
 func (s *session) serve() {
-	s.reply(220, fmt.Sprintf("%s ESMTP service ready", s.srv.Domain))
+	s.reply(220, fmt.Sprintf("%s ESMTP Quokka (quokkamail.org)", s.srv.Domain))
 
 	s.txtReader = textproto.NewReader(bufio.NewReader(s.conn))
 
