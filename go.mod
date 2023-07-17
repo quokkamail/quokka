@@ -3,7 +3,7 @@ module github.com/quokkamail/quokka
 go 1.20
 
 require (
-	github.com/pelletier/go-toml/v2 v2.0.7
+	github.com/pelletier/go-toml/v2 v2.0.9
 	github.com/prometheus/client_golang v1.15.1
 	github.com/shoenig/test v0.6.5
 	github.com/spf13/cobra v1.7.0
