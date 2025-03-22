@@ -1,24 +1,17 @@
 ---
-# https://vitepress.dev/reference/default-theme-home-page
 layout: home
 
 hero:
-  name: "Quokka"
-  text: "Easy Mail Server"
-  tagline: My great project tagline
+  name: Quokka
+  tagline: One-Click, Self-Hosted Mail Server
   actions:
     - theme: brand
-      text: Markdown Examples
-      link: /markdown-examples
+      text: What is Quokka?
+      link: /
     - theme: alt
-      text: API Examples
-      link: /api-examples
-
-features:
-  - title: Feature A
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature B
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature C
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+      text: Quickstart
+      link: /
+    - theme: alt
+      text: GitHub
+      link: https://github.com/quokkamail/quokka
 ---
