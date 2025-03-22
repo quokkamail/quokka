@@ -4,6 +4,7 @@ export default defineConfig({
   title: "Quokka",
   titleTemplate: ":title ~ Quokka",
   description: "One-Command, Self-Hosted Mail Server",
+  cleanUrls: true,
   head: [
     ["link", { rel: "icon", type: "image/svg+xml", href: "/images/logo.svg" }],
     ["link", { rel: "icon", type: "image/png", href: "/images/logo.png" }],
